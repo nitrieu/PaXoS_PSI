@@ -12,13 +12,15 @@ namespace osuCrypto
 		mInputSize = inputSize;
 		mNumHashs = numHashs;
 		mNumBins = numBins;
+		//mEdgeIdxMap(mInputSize);
+
 	}
 	void CuckooGraph::buidingGraph(span<block> inputs)
 	{
 		PRNG prng(ZeroBlock);
 		mAesHasher.setKey(prng.get<block>());
 	
-		std::unordered_map<std::string, std::vector<int>> groupHash;
+	//	std::unordered_map<std::string, std::vector<int>> groupHash;
 		std::vector<u64> hashes1(inputs.size());
 		std::vector<u64> hashes2(inputs.size());
 
@@ -32,37 +34,35 @@ namespace osuCrypto
 			hashes1[idxItem] = hh1 % mNumBins; //1st 64 bits for finding bin location
 			hashes2[idxItem] = hh2 % mNumBins; //2nd 64 bits for finding alter bin location
 
-			if (hashes1[idxItem] < hashes2[idxItem])
-				swap(hashes1[idxItem], hashes2[idxItem]);
+			//if (hashes1[idxItem] > hashes2[idxItem])
+			increasingSwap(hashes1[idxItem], hashes2[idxItem]);
+			
+			//std::cout << "hashes: " << hashes1[idxItem] << " === " << hashes2[idxItem] << std::endl;
 
-			auto h1 = hashes1[idxItem] * (mNumBins + 1); //scale
+			std::string key = concateInts(hashes1[idxItem] , hashes2[idxItem] , mNumBins); //h1||h2
 
-			std::string key = ToString(h1) + ToString(hashes2[idxItem]); //h1||h2
+			auto  p = mEdgeIdxMap.find(key);
 
-			auto  p = groupHash.find(key);
-
-			if (p == groupHash.end())
-				groupHash.emplace(key, std::vector<int>{ idxItem });
+			if (p == mEdgeIdxMap.end())
+			{
+				//groupHash.emplace(key, std::vector<int>{ idxItem });
+				mEdgeIdxMap.emplace(pair<string, int>(key, idxItem));
+				std::cout << "mEdgeIdxMap: " << key << " === " << idxItem << std::endl;
+			}
 			else
 			{
 				mIdx_inputs_circle_contains_2vertices.push_back(idxItem);
 			}
 		}
 
-		std::cout << "groupHash.size(): " << groupHash.size() << std::endl;
+		std::cout << "mEdgeIdxMap.size(): " << mEdgeIdxMap.size() << std::endl;
 
-		ccGraph g(groupHash.size()); //init vertext 0,,m
-
+		ccGraph g(mEdgeIdxMap.size()); //init vertext 0,,m
 
 		//if 2 items have same h1||h2 or h2||h1, insert only 1, other push in stash
-		for (auto it = groupHash.begin(); it != groupHash.end(); ++it)
+		for (auto it = mEdgeIdxMap.begin(); it != mEdgeIdxMap.end(); ++it)
 		{
-			u64 idxItem = it->second[0];
-		
-		/*	std::cout << "h1: " << hashes1[idxItem] << std::endl;
-			std::cout << "h2: " << hashes2[idxItem] << std::endl;
-			std::cout << "mNumBins: " << mNumBins << std::endl;*/
-
+			u64 idxItem = it->second;
 			boost::add_edge(hashes1[idxItem], hashes2[idxItem], g);
 		}
 

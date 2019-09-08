@@ -96,7 +96,7 @@ namespace tests_libOTe
 			if (dfs_circles[i].size() > 1) //circle
 			{
 				for (int j = 0; j < dfs_circles[i].size() - 1; ++j)
-					std::cout << "tree_edge: " << dfs_circles[i][j] << '\n';
+					std::cout << "tree_edge: " << dfs_circles[i][j]  <<   '\n';
 
 				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << "\n\n";
 
@@ -117,10 +117,31 @@ namespace tests_libOTe
 
 
 	}
+
+	void lable_edge_Test() {
+		std::map<EdgeID, int> mEdgeIdxMap;
+		ccGraph g(10); //init vertext 0,,m
+		
+		auto e1= boost::add_edge(0, 1, g);
+		mEdgeIdxMap.insert(pair<EdgeID, int>(e1.first, 1));
+
+		auto e2= boost::add_edge(1, 2, g);
+		mEdgeIdxMap.insert(pair<EdgeID, int>(e2.first, 3));
+
+		auto e3 =  boost::add_edge(2, 0, g);  //triagnle 012  //3
+		mEdgeIdxMap.insert(pair<EdgeID, int>(e3.first, 3));
+
+
+	//	g.out_edge_list
+		std::cout << mEdgeIdxMap[e3.first] << "\n";
+
+	}
+
+
 	void Cuckoo_BackEdges_Circle_with_Input_Test()
 	{
 
-		u64 setSize = 1 << 10;
+		u64 setSize = 1 <<4;
 		u64 mNumBins = 1.5 * setSize;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << mNumBins << "\n";
@@ -132,10 +153,16 @@ namespace tests_libOTe
 			inputs[idxItem] = prng.get<block>();
 
 		CuckooGraph graph;
-		graph.init(setSize, 2, 2.4 * setSize);
+		graph.init(setSize, 2,1.5* setSize);
 		graph.buidingGraph(inputs);
 		std::cout << "graph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
 
+	/*	for (auto elem = graph.mEdgeIdxMap.begin(); elem != graph.mEdgeIdxMap.end(); ++elem)
+		{
+			std::cout << elem->first << " ==== " << elem->second << "\n";
+
+		}
+*/
 
 		MyVisitor vis;
 		boost::depth_first_search(graph.mCuckooGraph, boost::visitor(vis));
@@ -150,14 +177,27 @@ namespace tests_libOTe
 		{
 			if (dfs_circles[i].size() > 1) //circle
 			{
+				
 				for (int j = 0; j < dfs_circles[i].size() - 1; ++j)
-					std::cout << "tree_edge: " << dfs_circles[i][j] << '\n';
+				{
+					std::cout << "tree_edge: " << dfs_circles[i][j] << " - ";
+				
+					auto key = Edge2StringIncr(dfs_circles[i][j], graph.mNumBins);
+					std::cout << graph.mEdgeIdxMap[key] << '\n';
 
-				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << "\n\n";
+
+				}
+				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " - ";
+				auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
+				std::cout << graph.mEdgeIdxMap[key] << '\n';
 
 			}
 			else
-				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << "\n";
+			{
+				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " - ";
+				auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
+				std::cout << graph.mEdgeIdxMap[key] << '\n';
+			}
 
 			std::cout << "===========================\n";
 
@@ -166,12 +206,24 @@ namespace tests_libOTe
 		for (int i = 0; i < dfs_non_circles.size(); ++i)
 		{
 			for (int j = 0; j < dfs_non_circles[i].size(); ++j)
-				std::cout << "tree_edge: " << dfs_non_circles[i][j] << "\n";
+			{
+				std::cout << "tree_edge: " << dfs_non_circles[i][j] << " - ";
 
+				auto key = Edge2StringIncr(dfs_non_circles[i][j], graph.mNumBins);
+				std::cout << graph.mEdgeIdxMap[key] << '\n';
+			}
 			std::cout << "===========================\n";
 
 
 		}
+
+
+	/*	for (auto elem = graph.mEdgeIdxMap.begin(); elem != graph.mEdgeIdxMap.end(); ++elem)
+		{
+			std::cout << elem->first << " ==== " << elem->second << "\n";
+
+		}*/
+		
 
 		//std::cout << dfs_tree_edges.size() << "  dfs_tree_edges.size()  " << dfs_cnt_tree_edge << '\n';
 		//std::cout << g.m_edges.size() << "  g.m_edges.size \n";

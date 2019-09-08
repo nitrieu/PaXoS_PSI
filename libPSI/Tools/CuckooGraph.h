@@ -28,6 +28,8 @@ using namespace std;
 
 namespace osuCrypto
 {
+	
+
 	typedef boost::adjacency_list<  // adjacency_list is a template depending on :
 		boost::vecS,               //  The container used for egdes : here, std::list.
 		boost::vecS,                //  The container used for vertices: here, std::vector.
@@ -39,6 +41,31 @@ namespace osuCrypto
 
 	typedef ccGraph::vertex_descriptor VertexID;
 	typedef ccGraph::edge_descriptor   EdgeID;
+
+
+	inline static string concateInts(u64 left, u64 right, u64 domain)
+	{
+		auto scale = left * (domain + 1); //scale
+		return (ToString(scale) + ToString(right)); //h1||h2
+	}
+
+	inline static void increasingSwap(u64& left, u64& right)
+	{
+		if (left > right)
+			swap(left, right);
+	}
+
+	inline static string Edge2StringIncr(EdgeID edge, u64 domain)
+	{
+		auto a = edge.m_source;
+		auto b = edge.m_target;
+	
+		//if (a > b)
+			increasingSwap(a, b);
+
+		return concateInts(a, b, domain);
+	}
+
 
 	//typedef std::vector<pair<int, int>> DfsTreeEdges;
 	//typedef pair<int, int> DfsTreeEdges;
@@ -181,12 +208,14 @@ namespace osuCrypto
 		 std::vector<int> mIdx_inputs_circle_contains_2vertices;
 		
 		 ccGraph mCuckooGraph;
-		 //std::unordered_map<EdgeID, int> mEdge_map;
+		// std::map<pair<int, int>, int> mEdgeIdxMap;
+		 std::map<string, int> mEdgeIdxMap;
+		 int mInputSize, mNumHashs, mNumBins;
+		 std::vector<u64> mHashes;
 
 	private:
 
-		int mInputSize, mNumHashs, mNumBins;
-		std::vector<u64> mHashes;
+		
 		
 
 
