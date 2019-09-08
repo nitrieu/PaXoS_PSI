@@ -25,6 +25,7 @@
     <ClCompile Include="Tools\BalancedIndex.cpp" />
     <ClCompile Include="Tools\CuckooHasher.cpp" />
     <ClCompile Include="Tools\CuckooGraph.cpp" />
+    <ClCompile Include="Tools\GaussianElimination.cpp" />
     <ClCompile Include="Tools\SimpleIndex .cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -39,6 +40,7 @@
     <ClInclude Include="Tools\BalancedIndex.h" />
     <ClInclude Include="Tools\CuckooHasher.h" />
     <ClInclude Include="Tools\CuckooGraph.h" />
+    <ClInclude Include="Tools\GaussianElimination.h" />
     <ClInclude Include="Tools\SimpleIndex.h" />
   </ItemGroup>
   <ItemGroup>

@@ -118,7 +118,7 @@ namespace tests_libOTe
 
 	}
 
-	void lable_edge_Test() {
+	void solveEquation_Test() {
 		std::map<EdgeID, int> mEdgeIdxMap;
 		ccGraph g(10); //init vertext 0,,m
 		
@@ -245,4 +245,185 @@ namespace tests_libOTe
 
 	}
 
+
+	// C++ program to demostrate working of Guassian Elimination 
+// method 
+
+
+#define N 4	 // Number of unknowns 
+#define M 5	 // Number of unknowns 
+
+	// function to reduce matrix to r.e.f. Returns a value to 
+	// indicate whether matrix is singular or not 
+	int forwardElim(double mat[N][M + 1]);
+
+	// function to calculate the values of the unknowns 
+	void backSub(double mat[N][M+ 1]);
+
+	// function to get matrix content 
+	void gaussianElimination(double mat[N][M + 1])
+	{
+		/* reduction into r.e.f. */
+		int singular_flag = forwardElim(mat);
+
+		/* if matrix is singular */
+		if (singular_flag != -1)
+		{
+			std::cout << ("Singular Matrix.\n");
+
+			/* if the RHS of equation corresponding to
+			zero row is 0, * system has infinitely
+			many solutions, else inconsistent*/
+			if (mat[singular_flag][N])
+				std::cout << ("Inconsistent System.");
+			else
+				std::cout << ("May have infinitely many "
+					"solutions.");
+
+			return;
+		}
+
+		/* get solution to system and print it using
+		backward substitution */
+		backSub(mat);
+	}
+
+	// function for elementary operation of swapping two rows 
+	void swap_row(double mat[N][M + 1], int i, int j)
+	{
+		//printf("Swapped rows %d and %d\n", i, j); 
+
+		for (int k = 0; k <= M; k++)
+		{
+			double temp = mat[i][k];
+			mat[i][k] = mat[j][k];
+			mat[j][k] = temp;
+		}
+	}
+
+	// function to print matrix content at any stage 
+	void print(double mat[N][M + 1])
+	{
+		for (int i = 0; i < N; i++, std::cout<<("\n"))
+			for (int j = 0; j <= M; j++)
+				std::cout<< mat[i][j] <<" ";
+
+		std::cout<<("\n");
+	}
+
+	// function to reduce matrix to r.e.f. 
+	int forwardElim(double mat[N][M + 1])
+	{
+		print(mat);
+		for (int k = 0; k < N; k++)
+		{
+			// Initialize maximum value and index for pivot 
+			int i_max = k;
+			int v_max = mat[i_max][k];
+
+			/* find greater amplitude for pivot if any */
+			for (int i = k + 1; i < N; i++)
+				if (abs(mat[i][k]) > v_max)
+					v_max = mat[i][k], i_max = i;
+
+			/* if a prinicipal diagonal element is zero,
+			* it denotes that matrix is singular, and
+			* will lead to a division-by-zero later. */
+			if (v_max == 0) //all values at colum k =0 => skip this column 
+			{
+				std::cout << "diag " << k << " = 0 \n";
+				continue;
+			}
+			/* Swap the greatest value row with current row */
+			if (i_max != k)
+				swap_row(mat, k, i_max);
+
+
+			for (int i = k + 1; i < N; i++)
+			{
+				/* factor f to set current row kth element to 0,
+				* and subsequently remaining kth column to 0 */
+				if (mat[i][k] == 0)
+					continue;
+
+				double f =  mat[k][k]/ mat[i][k] ;
+
+				/* subtract fth multiple of corresponding kth
+				row element*/
+				for (int j = k; j <= M; j++)
+					mat[i][j] = mat[i][j] * f - mat[k][j];
+
+				/* filling lower triangular matrix with zeros*/
+				//mat[i][k] = 0;
+			}
+
+			print(mat);	 //for matrix state 
+		}
+		print(mat);		 //for matrix state 
+		return -1;
+	}
+
+	// function to calculate the values of the unknowns 
+	void backSub(double mat[N][M + 1])
+	{
+		double x[M]; // An array to store solution 
+
+		/* Start calculating from last equation up to the
+		first */
+		int previous_idx_non_zero = M;
+
+		for (int i = N - 1; i >= 0; i--)
+		{
+			// find a first non-zero cell
+			int idx_non_zero = -1;
+			for (int j = i; j< M; j++)
+				if (mat[i][j] != 0)
+				{
+					idx_non_zero = j;
+					break;
+				}
+
+			if (idx_non_zero != -1) {
+				
+				double sum = 0;
+				for (int j = idx_non_zero+1; j < previous_idx_non_zero; j++)
+				{
+					x[j] =  rand() % 50;  // chose random value for all X[from idx_non_zero to previous_idx_non_zero]
+					sum +=x[j] * mat[i][j];
+				}
+
+				for (int j = previous_idx_non_zero; j < M; j++)
+				{
+					sum += x[j] * mat[i][j]; // these x[j] have been assigned before
+				}
+
+				/* divide the RHS by the coefficient of the
+				unknown being calculated */
+				x[idx_non_zero] = (mat[i][M] - sum )/ mat[i][idx_non_zero];
+
+				previous_idx_non_zero = idx_non_zero;
+			}
+		}
+
+		std::cout << "\nSolution for the system:\n";
+		for (int i = 0; i < M; i++)
+			std::cout << x[i] << "\n";
+	}
+
+	
+
+	// Driver program 
+	void Gaussian_Elimination_Test()
+	{
+		/* input matrix */
+		double mat[N][M + 1] = { {1,2,3,4,5,15},
+							  {-1, -2, 0,0,1,-2},
+							  {0,0,1,1,0,2},
+								{1,1,3,0,1,6}
+		};
+
+		gaussianElimination(mat);
+
+		//return 0;
+	}
 }

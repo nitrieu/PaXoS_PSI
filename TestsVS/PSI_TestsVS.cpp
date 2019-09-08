@@ -70,9 +70,16 @@ namespace tests_libOTe
 		TEST_METHOD(lable_edge_TestVS)
 		{
 			InitDebugPrinting();
-			lable_edge_Test();
+			solveEquation_Test();
 		}
 		
+		TEST_METHOD(Gaussian_Elimination_TestVS)
+		{
+			InitDebugPrinting();
+			Gaussian_Elimination_Test();
+		}
+
+
 
 
 	};
