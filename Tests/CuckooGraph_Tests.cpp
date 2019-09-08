@@ -246,23 +246,19 @@ namespace tests_libOTe
 	}
 
 
-	// C++ program to demostrate working of Guassian Elimination 
-// method 
-
-
-#define N 4	 // Number of unknowns 
-#define M 5	 // Number of unknowns 
+	
 
 	// function to reduce matrix to r.e.f. Returns a value to 
 	// indicate whether matrix is singular or not 
-	int forwardElim(double mat[N][M + 1]);
+	int forwardElim(std::vector < std::vector<double>>& mat);
 
 	// function to calculate the values of the unknowns 
-	void backSub(double mat[N][M+ 1]);
+	void backSub(std::vector < std::vector<double>>& mat);
 
 	// function to get matrix content 
-	void gaussianElimination(double mat[N][M + 1])
+	void gaussianElimination(std::vector < std::vector<double>>& mat)
 	{
+		int N = mat.size();
 		/* reduction into r.e.f. */
 		int singular_flag = forwardElim(mat);
 
@@ -289,9 +285,10 @@ namespace tests_libOTe
 	}
 
 	// function for elementary operation of swapping two rows 
-	void swap_row(double mat[N][M + 1], int i, int j)
+	void swap_row(std::vector < std::vector<double>>& mat, int i, int j)
 	{
 		//printf("Swapped rows %d and %d\n", i, j); 
+		int M= mat[0].size()-1;
 
 		for (int k = 0; k <= M; k++)
 		{
@@ -302,18 +299,23 @@ namespace tests_libOTe
 	}
 
 	// function to print matrix content at any stage 
-	void print(double mat[N][M + 1])
+	void print(std::vector < std::vector<double>>& mat)
 	{
-		for (int i = 0; i < N; i++, std::cout<<("\n"))
-			for (int j = 0; j <= M; j++)
+		std::cout << mat.size() << "\n";
+		std::cout << mat[0].size() << "\n";
+
+		for (int i = 0; i < mat.size(); i++, std::cout<<("\n"))
+			for (int j = 0; j < mat[i].size(); j++)
 				std::cout<< mat[i][j] <<" ";
 
 		std::cout<<("\n");
 	}
 
 	// function to reduce matrix to r.e.f. 
-	int forwardElim(double mat[N][M + 1])
+	int forwardElim(std::vector < std::vector<double>>& mat)
 	{
+		int N= mat.size();
+		int M = mat[0].size()-1;
 		print(mat);
 		for (int k = 0; k < N; k++)
 		{
@@ -364,9 +366,12 @@ namespace tests_libOTe
 	}
 
 	// function to calculate the values of the unknowns 
-	void backSub(double mat[N][M + 1])
+	void backSub(std::vector < std::vector<double>>& mat)
 	{
-		double x[M]; // An array to store solution 
+		int N = mat.size();
+		int M = mat[0].size()-1;
+
+		std::vector<double>x(M); // An array to store solution 
 
 		/* Start calculating from last equation up to the
 		first */
@@ -416,12 +421,15 @@ namespace tests_libOTe
 	void Gaussian_Elimination_Test()
 	{
 		/* input matrix */
-		double mat[N][M + 1] = { {1,2,3,4,5,15},
-							  {-1, -2, 0,0,1,-2},
-							  {0,0,1,1,0,2},
-								{1,1,3,0,1,6}
-		};
+		
+		std::vector < std::vector<double>> mat(4);
+		mat[0] = { 1,2,3,4,5,15 };
+		mat[1] = { -1, -2, 0,0,1,-2 };
+		mat[2] = { 0,0,1,1,0,2 };
+		mat[3] = { 1,1,3,0,1,6 };
 
+		
+		
 		gaussianElimination(mat);
 
 		//return 0;
