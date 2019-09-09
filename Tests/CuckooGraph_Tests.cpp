@@ -33,6 +33,7 @@
 #include "Tools/SimpleIndex.h"
 #include "Tools/CuckooHasher.h"
 #include "Tools/CuckooGraph.h"
+#include "Tools/GaussianElimination.h"
 
 #include "Common.h"
 #include <thread>
@@ -246,200 +247,6 @@ namespace tests_libOTe
 	}
 
 
-	
-
-	// function to reduce matrix to r.e.f. Returns a value to 
-	// indicate whether matrix is singular or not 
-	int forwardElim(std::vector < std::vector<bool>>& mat, std::vector<block>& y);
-
-	// function to calculate the values of the unknowns 
-	std::vector<block> backSub(std::vector < std::vector<bool>>& mat, std::vector<block>& y);
-
-	// function to get matrix content 
-	std::vector<block> gaussianElimination(std::vector < std::vector<bool>>& mat, std::vector<block>& y)
-	{
-		int N = mat.size();
-		/* reduction into r.e.f. */
-		int singular_flag = forwardElim(mat,y);
-
-		/* if matrix is singular */
-		if (singular_flag != -1)
-		{
-			std::cout << ("Singular Matrix.\n");
-
-			/* if the RHS of equation corresponding to
-			zero row is 0, * system has infinitely
-			many solutions, else inconsistent*/
-			/*if (memcmp((u8*)&mat[singular_flag][N], (u8*)& ZeroBlock, sizeof(block))!=0 && )
-				std::cout << ("Inconsistent System.");*/
-		
-
-			//return ;
-		}
-
-		/* get solution to system and print it using
-		backward substitution */
-		return backSub(mat,y);
-	}
-
-	// function for elementary operation of swapping two rows 
-	void swap_row(std::vector < std::vector<bool>>& mat, std::vector<block>& y, int i, int j)
-	{
-		//printf("Swapped rows %d and %d\n", i, j); 
-		int M= mat[0].size();
-
-		for (int k = 0; k < M; k++)
-		{
-			bool temp = mat[i][k];
-			mat[i][k] = mat[j][k];
-			mat[j][k] = temp;
-
-			
-		}
-		block temp1 = y[i];
-		y[i] = y[j];
-		y[j] = temp1;
-	}
-
-	// function to print matrix content at any stage 
-	void print(std::vector < std::vector<bool>>& mat, std::vector<block>& y)
-	{
-		std::cout << mat.size() << "\n";
-		std::cout << mat[0].size() << "\n";
-
-		for (int i = 0; i < mat.size(); i++, std::cout << ("\n"))
-		{
-			for (int j = 0; j < mat[i].size(); j++)
-				std::cout << mat[i][j] << " ";
-			
-			std::cout << y[i] << " ";
-		}
-		std::cout<<("\n");
-	}
-
-	// function to reduce matrix to r.e.f. 
-	int forwardElim(std::vector < std::vector<bool>>& mat, std::vector<block>& y)
-	{
-
-		
-
-		int N= mat.size();
-		int M = mat[0].size();
-		print(mat,y);
-		for (int k = 0; k < N; k++)
-		{
-			// Initialize maximum value and index for pivot 
-			int i_max = k;
-			bool v_max = mat[i_max][k];
-
-			/* find greater amplitude for pivot if any */
-			for (int i = k + 1; i < N; i++)
-				if (mat[i][k])
-				{
-					v_max = mat[i][k];
-					i_max = i;
-					break;
-				}
-			/* if a prinicipal diagonal element is zero,
-			* it denotes that matrix is singular, and
-			* will lead to a division-by-zero later. */
-			if (!v_max) //all values at colum k =0 => skip this column 
-			{
-				std::cout << "diag " << k << " = 0 \n";
-				continue;
-			}
-			/* Swap the greatest value row with current row */
-			if (i_max != k)
-				swap_row(mat, y,k, i_max);
-
-
-			for (int i = k + 1; i < N; i++)
-			{
-				/* factor f to set current row kth element to 0,
-				* and subsequently remaining kth column to 0 */
-				//if (mat[i][k] == 0)
-				if (!mat[i][k])
-					continue;
-
-			
-				/* subtract fth multiple of corresponding kth
-				row element*/
-				for (int j = k; j < M; j++)
-					mat[i][j] = mat[i][j] ^ mat[k][j];// -mat[k][j];
-
-				y[i] = y[i] ^ y[k];
-
-				/* filling lower triangular matrix with zeros*/
-				//mat[i][k] = 0;
-			}
-
-			print(mat,y);	 //for matrix state 
-		}
-		print(mat,y);		 //for matrix state 
-		return -1;
-	}
-
-	// function to calculate the values of the unknowns 
-	std::vector<block> backSub(std::vector < std::vector<bool>>& mat, std::vector<block>& y)
-	{
-		PRNG prng(ZeroBlock);
-		
-
-		int N = mat.size();
-		int M = mat[0].size();
-
-		std::vector<block>x(M); // An array to store solution 
-
-		/* Start calculating from last equation up to the
-		first */
-		int previous_idx_non_zero = M;
-
-		for (int i = N - 1; i >= 0; i--)
-		{
-			// find a first non-zero cell
-			int idx_non_zero = -1;
-			for (int j = i; j< M; j++)
-				if (mat[i][j])
-				{
-					idx_non_zero = j;
-					break;
-				}
-
-			if (idx_non_zero != -1) {
-				
-				block sum = ZeroBlock;
-				for (int j = idx_non_zero+1; j < previous_idx_non_zero; j++)
-				{
-					x[j] = prng.get<block>();  // chose random value for all X[from idx_non_zero to previous_idx_non_zero]
-					if (mat[i][j])
-						sum = sum ^ x[j];
-				}
-
-				for (int j = previous_idx_non_zero; j < M; j++)
-				{
-					// these x[j] have been assigned before
-					if (mat[i][j])
-						sum = sum ^ x[j];
-				}
-
-				/* divide the RHS by the coefficient of the
-				unknown being calculated */
-				x[idx_non_zero] = (y[i]^sum );
-
-				previous_idx_non_zero = idx_non_zero;
-			}
-		}
-
-		std::cout << "\nSolution for the system:\n";
-		for (int i = 0; i < M; i++)
-			std::cout << x[i] << "\n";
-
-		return x;
-	}
-
-	
-	
-
 	// Driver program 
 	void Gaussian_Elimination_Test()
 	{
@@ -448,10 +255,11 @@ namespace tests_libOTe
 		std::vector < std::vector<bool>> mat(4);
 		mat[0] = { 1,0,0,1,1};
 		mat[1] = { 1,0,1,1,0 };
-		mat[2] = { 1,0,1,0,0 };
-		mat[3] = { 0,1,0,1,0 };
+		mat[2] = { 1,0,0,0,0 };
+		mat[3] = { 0,0,0,0,1 };
 
 		std::vector<block> Y{ _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 3), _mm_set_epi64x(0, 2) };
+		std::vector<block> Y_check{ _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 3), _mm_set_epi64x(0, 2) };
 		
 		auto x= gaussianElimination(mat,Y);
 
@@ -464,9 +272,9 @@ namespace tests_libOTe
 					sum = sum ^ x[j];
 
 			}
-			if (memcmp((u8*)& sum, (u8*)& Y[i], sizeof(block)) != 0)
+			if (memcmp((u8*)& sum, (u8*)& Y_check[i], sizeof(block)) != 0)
 			{
-				std::cout << sum << " vs " << Y[i] << "\n";
+				std::cout << sum << " vs " << Y_check[i] << "\n";
 			}
 
 		}
