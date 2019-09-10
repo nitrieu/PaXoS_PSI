@@ -92,8 +92,10 @@ namespace osuCrypto
 	private:
 		boost::shared_ptr< std::set<EdgeID>> mDfs_tree_all_edges; // TODO: remove this
 		boost::shared_ptr< std::vector<EdgeID>> mDfs_component;
-		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_non_circles;
-		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_circles;
+		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_non_connected_components;
+		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_connected_component;
+		//contain many connected components, each contains many circles, each circle contains manay edges + end at back_edge 
+		boost::shared_ptr< std::vector<std::vector<std::vector<EdgeID>>>> mDfs_connected_components;
 		
 
 		//int a;
@@ -108,8 +110,9 @@ namespace osuCrypto
 
 		MyVisitor() : mDfs_tree_all_edges(new std::set<EdgeID>())
 			, mDfs_component(new std::vector<EdgeID>())
-			, mDfs_non_circles(new std::vector<std::vector<EdgeID>>())
-			, mDfs_circles(new std::vector<std::vector<EdgeID>>) {}
+			, mDfs_non_connected_components(new std::vector<std::vector<EdgeID>>())
+			, mDfs_connected_component(new std::vector<std::vector<EdgeID>>)
+			, mDfs_connected_components(new std::vector<std::vector<std::vector<EdgeID>>>) {}
 		
 
 		/*void initialize_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
@@ -150,7 +153,7 @@ namespace osuCrypto
 				// find a real back_edge => this make a circle
 
 				mDfs_component->push_back(e); //last is back_edge
-				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles
+				mDfs_connected_component->push_back(*mDfs_component); // add this circle to dfs_circles
 
 				mDfs_component->clear(); //for next circle
 				//isCircle->clear(); //for next circle
@@ -171,8 +174,8 @@ namespace osuCrypto
 			std::cout << "tree_edge: " << e << std::endl;
 			std::cout << "mDfs_component->size(): " << mDfs_component->size() << std::endl;
 		}
-		std::vector<std::vector<EdgeID>>& GetDfsCircles() const { return *mDfs_circles; }
-		std::vector<std::vector<EdgeID>>& GetDfsNOCircles() const { return *mDfs_non_circles; }
+		std::vector<std::vector<EdgeID>>& GetDfsNOConnectedComponents() const { return *mDfs_non_connected_components; }
+		std::vector<std::vector<std::vector<EdgeID>>>& GetDfsConnectedComponent() const { return *mDfs_connected_components; }
 
 		
 
@@ -187,8 +190,17 @@ namespace osuCrypto
 				
 				if (!isConnectedComponent && mDfs_component->size() > 0) //no circle
 				{
-					mDfs_non_circles->push_back(*mDfs_component); // 
+					mDfs_non_connected_components->push_back(*mDfs_component); // 
 					mDfs_component->clear(); //for next circle
+					isConnectedComponent = false;
+				}
+
+				if (isConnectedComponent)
+				{
+					mDfs_connected_components->push_back(*mDfs_connected_component); // 
+					mDfs_component->clear(); //for next circle
+					mDfs_connected_component->clear(); //for next circle
+					isConnectedComponent = false;
 				}
 				std::cout << "finish_vertex finish_vertex: " << s << std::endl;
 			}
