@@ -78,7 +78,17 @@ namespace tests_libOTe
 			InitDebugPrinting();
 			Gaussian_Elimination_Test();
 		}
+		TEST_METHOD(Cuckoo_OKVS_TestVS)
+		{
+			InitDebugPrinting();
+			Cuckoo_OKVS_Test();
+		}
 
+		TEST_METHOD(bitVector_TestVS)
+		{
+			InitDebugPrinting();
+			bitVector_Test();
+		}
 
 
 

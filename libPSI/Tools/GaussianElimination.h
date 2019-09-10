@@ -28,9 +28,6 @@ using namespace std;
 
 namespace osuCrypto {
 	//TODO: cleaning 
-
-	// function to reduce matrix to r.e.f. Returns a value to 
-	// indicate whether matrix is singular or not 
 	inline static int forwardElim(std::vector < std::vector<bool>>& mat, std::vector<block>& y);
 
 	// function to calculate the values of the unknowns 
@@ -107,17 +104,19 @@ namespace osuCrypto {
 		int N = mat.size();
 		int M = mat[0].size();
 		printMatrix(mat, y);
-		for (int k = 0; k < N; k++)
+		int colIdx = 0;
+		int rowId = 0;
+		while (rowId < N)
 		{
 			// Initialize maximum value and index for pivot 
-			int i_max = k;
-			bool v_max = mat[i_max][k];
+			int i_max = rowId;
+			bool v_max = mat[i_max][colIdx];
 
 			/* find greater amplitude for pivot if any */
-			for (int i = k + 1; i < N; i++)
-				if (mat[i][k])
+			for (int i = rowId; i < N; i++)
+				if (mat[i][colIdx])
 				{
-					v_max = mat[i][k];
+					v_max = mat[i][colIdx];
 					i_max = i;
 					break;
 				}
@@ -126,35 +125,37 @@ namespace osuCrypto {
 			* will lead to a division-by-zero later. */
 			if (!v_max) //all values at colum k =0 => skip this column 
 			{
-				std::cout << "diag " << k << " = 0 \n";
+				std::cout << "diag " << colIdx << " = 0 \n";
+				colIdx++;
 				continue;
 			}
 			/* Swap the greatest value row with current row */
-			if (i_max != k)
-				swap_row(mat, y, k, i_max);
+			if (i_max != rowId)
+				swap_row(mat, y, rowId, i_max);
 
 
-			for (int i = k + 1; i < N; i++)
+			for (int i = rowId + 1; i < N; i++)
 			{
 				/* factor f to set current row kth element to 0,
 				* and subsequently remaining kth column to 0 */
 				//if (mat[i][k] == 0)
-				if (!mat[i][k])
+				if (!mat[i][colIdx])
 					continue;
 
 
 				/* subtract fth multiple of corresponding kth
 				row element*/
-				for (int j = k; j < M; j++)
-					mat[i][j] = mat[i][j] ^ mat[k][j];// -mat[k][j];
+				for (int j = colIdx; j < M; j++)
+					mat[i][j] = mat[i][j] ^ mat[rowId][j];// -mat[k][j];
 
-				y[i] = y[i] ^ y[k];
+				y[i] = y[i] ^ y[rowId];
 
 				/* filling lower triangular matrix with zeros*/
 				//mat[i][k] = 0;
 			}
 
 			printMatrix(mat, y);	 //for matrix state 
+			rowId++;
 		}
 		printMatrix(mat, y);		 //for matrix state 
 		return -1;
@@ -192,8 +193,8 @@ namespace osuCrypto {
 				for (int j = idx_non_zero + 1; j < previous_idx_non_zero; j++)
 				{
 					x[j] = prng.get<block>();  // chose random value for all X[from idx_non_zero to previous_idx_non_zero]
-					
-					std::cout << "x["<<j<<"]= "  << x[j] <<"\n";
+
+					std::cout << "x[" << j << "]= " << x[j] << "\n";
 					if (mat[i][j])
 						sum = sum ^ x[j];
 
@@ -225,5 +226,9 @@ namespace osuCrypto {
 
 		return x;
 	}
+
+
+	// function to reduce matrix to r.e.f. Returns a value to 
+	// indicate whether matrix is singular or not 
 
 }

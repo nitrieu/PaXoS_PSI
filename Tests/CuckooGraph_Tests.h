@@ -7,5 +7,7 @@ namespace tests_libOTe
 	void solveEquation_Test();
 	void Cuckoo_BackEdges_Circle_with_Input_Test();
 	void Gaussian_Elimination_Test();
+	void Cuckoo_OKVS_Test();
+	void bitVector_Test();
 
 }

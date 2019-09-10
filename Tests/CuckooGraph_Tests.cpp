@@ -246,7 +246,7 @@ namespace tests_libOTe
 
 	}
 
-
+	
 	// Driver program 
 	void Gaussian_Elimination_Test()
 	{
@@ -259,25 +259,191 @@ namespace tests_libOTe
 		mat[3] = { 0,0,0,0,1 };
 
 		std::vector<block> Y{ _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 3), _mm_set_epi64x(0, 2) };
-		std::vector<block> Y_check{ _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 3), _mm_set_epi64x(0, 2) };
+
+		auto mat_check = mat;
+		auto y_check = Y;
 		
 		auto x= gaussianElimination(mat,Y);
 
-		for (int i = 0; i < mat.size(); i++)
+		for (int i = 0; i < mat_check.size(); i++)
 		{
 			block sum=ZeroBlock;
-			for (u64 j = 0; j < mat[i].size(); j++)
+			for (u64 j = 0; j < mat_check[i].size(); j++)
 			{
-				if (mat[i][j])
+				if (mat_check[i][j])
 					sum = sum ^ x[j];
 
 			}
-			if (memcmp((u8*)& sum, (u8*)& Y_check[i], sizeof(block)) != 0)
+			if (memcmp((u8*)& sum, (u8*)& y_check[i], sizeof(block)) != 0)
 			{
-				std::cout << sum << " vs " << Y_check[i] << "\n";
+				std::cout << sum << " vs " << y_check[i] << "\n";
 			}
 
 		}
+
 		//return 0;
 	}
+
+	void bitVector_Test() {
+		PRNG prng(ZeroBlock);
+		auto x= AllOneBlock ^ OneBlock;
+		BitVector bit((u8*)& x, sizeof(block));
+		std::cout << "bit = " << bit << "\n";
+
+	}
+
+	//TODO: optimize
+	inline static  std::vector<bool> bitVector2BoolVector(BitVector& bit_vector) {
+		std::vector<bool> res(bit_vector.size());
+		for (u64 i = 0; i < bit_vector.size(); i++)
+		{
+			res[i] = bit_vector[i];
+		}
+		return res;
+	}
+
+	inline void print_BoolVector(std::vector<bool> vec)
+	{
+		for (u64 i = 0; i < vec.size(); i++)
+		{
+			std::cout << vec[i] <<"";
+		}
+		std::cout << "\n";
+	}
+
+	void Cuckoo_OKVS_Test()
+	{
+
+		u64 setSize = 1 << 5;
+		u64 mNumBins = 1.1 * setSize;
+		std::cout << "input_size = " << setSize << "\n";
+		std::cout << "bin_size = " << mNumBins << "\n";
+		PRNG prng(ZeroBlock);
+
+
+		std::vector<block> inputs(setSize);
+		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
+			inputs[idxItem] = prng.get<block>();
+
+		CuckooGraph graph;
+		graph.init(setSize, 2, 1.5 * setSize);
+		graph.buidingGraph(inputs);
+		std::cout << "graph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
+
+		/*	for (auto elem = graph.mEdgeIdxMap.begin(); elem != graph.mEdgeIdxMap.end(); ++elem)
+			{
+				std::cout << elem->first << " ==== " << elem->second << "\n";
+
+			}
+	*/
+
+		MyVisitor vis;
+		boost::depth_first_search(graph.mCuckooGraph, boost::visitor(vis));
+
+		auto dfs_circles = vis.GetDfsCircles();
+		auto dfs_non_circles = vis.GetDfsNOCircles();
+
+		std::cout << "dfs_circles.size(): " << dfs_circles.size() << "\n";
+		std::cout << "dfs_non_circles.size(): " << dfs_non_circles.size() << "\n";
+
+		for (int i = 0; i < dfs_circles.size(); ++i)
+		{
+			if (dfs_circles[i].size() > 1) //circle
+			{
+
+				for (int j = 0; j < dfs_circles[i].size() - 1; ++j)
+				{
+					std::cout << "tree_edge: " << dfs_circles[i][j] << " - ";
+
+					auto key = Edge2StringIncr(dfs_circles[i][j], graph.mNumBins);
+					std::cout << graph.mEdgeIdxMap[key] << '\n';
+
+
+				}
+				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " - ";
+				auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
+				std::cout << graph.mEdgeIdxMap[key] << '\n';
+
+			}
+			else
+			{
+				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " - ";
+				auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
+				std::cout << graph.mEdgeIdxMap[key] << '\n';
+			}
+
+			std::cout << "===========================\n";
+
+		}
+
+		for (int i = 0; i < dfs_non_circles.size(); ++i)
+		{
+			for (int j = 0; j < dfs_non_circles[i].size(); ++j)
+			{
+				std::cout << "tree_edge: " << dfs_non_circles[i][j] << " - ";
+
+				auto key = Edge2StringIncr(dfs_non_circles[i][j], graph.mNumBins);
+				std::cout << graph.mEdgeIdxMap[key] << '\n';
+			}
+			std::cout << "===========================\n";
+
+
+		}
+
+		//================Create linear equation
+		int mSigma = 40 + 40;
+		std::vector < std::vector<bool>> GaussMatrix;
+		std::vector<block> assocated_values;
+		AES mAesRfunction(prng.get<block>());
+
+		block equation;
+		block assocated_value;
+
+		for (int i = 0; i < dfs_circles.size(); ++i)
+		{
+			equation = ZeroBlock;
+			assocated_value = ZeroBlock;
+			for (int j = 0; j < dfs_circles[i].size(); ++j)
+			{
+				auto keyEgdeMapping = Edge2StringIncr(dfs_circles[i][j], graph.mNumBins);
+				auto idx_item_in_circle = graph.mEdgeIdxMap[keyEgdeMapping];
+				block cipher = mAesRfunction.ecbEncBlock(inputs[idx_item_in_circle]);
+				equation = equation ^ cipher;
+				assocated_value = assocated_value ^ inputs[idx_item_in_circle];
+			}
+		BitVector coeff((u8*)&equation, mSigma);
+			auto row = bitVector2BoolVector(coeff);
+				print_BoolVector(row);
+			std::cout << coeff << "\n";
+			GaussMatrix.push_back(row);
+			assocated_values.push_back(assocated_value);
+		}
+
+		//Solution 
+		auto R = gaussianElimination(GaussMatrix, assocated_values);
+
+		auto copy_GaussMatrix = GaussMatrix; //for checking only
+		auto copy_assocated_values = assocated_values; //for checking only
+
+		for (int i = 0; i < copy_GaussMatrix.size(); i++)
+		{
+			block sum = ZeroBlock;
+			for (u64 j = 0; j < copy_GaussMatrix[i].size(); j++)
+			{
+				if (copy_GaussMatrix[i][j])
+					sum = sum ^ R[j];
+
+			}
+			if (memcmp((u8*)& sum, (u8*)& copy_assocated_values[i], sizeof(block)) != 0)
+			{
+				std::cout << sum << " vs " << copy_assocated_values[i] << "\n";
+			}
+
+		}
+
+
+
+	}
+
+
 }
