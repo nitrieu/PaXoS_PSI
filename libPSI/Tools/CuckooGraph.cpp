@@ -7,7 +7,7 @@
 
 namespace osuCrypto
 {
-	void CuckooGraph::init(u64 inputSize, u64 numHashs, u64 numBins)
+	void MyVisitor::init(u64 inputSize, u64 numHashs, u64 numBins)
 	{
 		mInputSize = inputSize;
 		mNumHashs = numHashs;
@@ -15,15 +15,15 @@ namespace osuCrypto
 		//mEdgeIdxMap(mInputSize);
 
 	}
-	void CuckooGraph::buidingGraph(span<block> inputs)
+	void MyVisitor::buidingGraph(span<block> inputs)
 	{
 		PRNG prng(ZeroBlock);
 		mAesHasher.setKey(prng.get<block>());
 	
 	//	std::unordered_map<std::string, std::vector<int>> groupHash;
-		std::vector<u64> hashes1(inputs.size());
-		std::vector<u64> hashes2(inputs.size());
-
+		hashes1.resize(inputs.size());
+		hashes2.resize(inputs.size());
+		strHashesIncr.resize(inputs.size());
 
 		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
 		{
@@ -35,23 +35,24 @@ namespace osuCrypto
 			hashes2[idxItem] = hh2 % mNumBins; //2nd 64 bits for finding alter bin location
 
 			//if (hashes1[idxItem] > hashes2[idxItem])
-			increasingSwap(hashes1[idxItem], hashes2[idxItem]);
-			
-			//std::cout << "hashes: " << hashes1[idxItem] << " === " << hashes2[idxItem] << std::endl;
+			//increasingSwap(hashes1[idxItem], hashes2[idxItem]);
+			std::cout << "hashes: " << hashes1[idxItem] << " === " << hashes2[idxItem] << "  == " << mNumBins << std::endl;
 
-			std::string key = concateInts(hashes1[idxItem] , hashes2[idxItem] , mNumBins); //h1||h2
+			strHashesIncr[idxItem] = concateIntsIncr(hashes1[idxItem] , hashes2[idxItem] , mNumBins); //h1||h2
 
-			auto  p = mEdgeIdxMap.find(key);
+			auto  p = mEdgeIdxMap.find(strHashesIncr[idxItem]);
 
 			if (p == mEdgeIdxMap.end())
 			{
-				//groupHash.emplace(key, std::vector<int>{ idxItem });
-				mEdgeIdxMap.emplace(pair<string, int>(key, idxItem));
-				std::cout << "mEdgeIdxMap: " << key << " === " << idxItem << std::endl;
+				mEdgeIdxMap.emplace(pair<string, int>(strHashesIncr[idxItem], idxItem));
+				std::cout << "mEdgeIdxMap: " << strHashesIncr[idxItem] << " === " << idxItem << std::endl;
 			}
 			else
 			{
-				mIdx_inputs_circle_contains_2vertices.push_back(idxItem);
+				mStrBadItems.insert(strHashesIncr[idxItem]);
+				mIdxBadItems.insert(idxItem); // for test
+				std::cout << "mIdxBadItems============ " << idxItem << std::endl;
+
 			}
 		}
 

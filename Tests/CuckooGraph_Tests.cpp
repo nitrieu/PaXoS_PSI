@@ -57,8 +57,8 @@ namespace tests_libOTe
 
 
 		int m = 20;
+		MyVisitor vis;
 		ccGraph g(m); //init vertext 0,,m
-
 
 		boost::add_edge(0, 1, g);
 		boost::add_edge(1, 2, g);
@@ -75,7 +75,7 @@ namespace tests_libOTe
 		boost::add_edge(8, 3, g);
 		boost::add_edge(3, 9, g);
 		boost::add_edge(9, 10, g);
-		boost::add_edge(10, 3, g);
+		//boost::add_edge(10, 3, g);
 
 		boost::add_edge(15, 16, g);
 		boost::add_edge(16, 17, g);
@@ -85,41 +85,34 @@ namespace tests_libOTe
 
 		//boost::add_edge(17, 15, g);  //3
 
-		MyVisitor vis;
+
 		boost::depth_first_search(g, boost::visitor(vis));
 
-		auto dfs_non_connected_component = vis.GetDfsNOConnectedComponents();
-		auto dfs_connected_component = vis.GetDfsConnectedComponent();
+		auto dfs_circles = vis.GetDfsCircles();
+		auto dfs_visitor = vis.GetDfsVisitor();
 
-		std::cout << "dfs_connected_component.size(): " << dfs_connected_component.size() << "\n";
-		std::cout << "dfs_non_circles.size(): " << dfs_non_connected_component.size() <<"\n";
-
-		for (int i = 0; i < dfs_connected_component.size(); ++i)
+		std::cout << "=============\n";
+		for (int i = 0; i < dfs_circles.size(); ++i)
 		{
-			for (int j = 0; j < dfs_connected_component[i].size(); ++j)
+
+			if (dfs_circles[i].size() > 1) //circle
 			{
-				if (dfs_connected_component[i][j].size() > 1) //circle
-				{
 
-					for (int k= 0; k< dfs_connected_component[i][j].size() - 1; ++k)
-						std::cout << "tree_edge: " << dfs_connected_component[i][j][k] << '\n';
+				for (int k = 0; k < dfs_circles[i].size() - 1; ++k)
+					std::cout << "tree_edge: " << dfs_circles[i][k] << '\n';
 
-					std::cout << "back_edge: " << dfs_connected_component[i][j][dfs_connected_component[i][j].size() - 1] << "\n\n";
+				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << "\n===\n\n";
 
-				}
-				else
-					std::cout << "back_edge: " << dfs_connected_component[i][j][dfs_connected_component[i][j].size() - 1] << "\n\n";
 			}
-			std::cout << "=========\n";
+			else
+				std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << "\n===\n\n";
+
 		}
 
 
-		for (int i = 0; i < dfs_non_connected_component.size(); ++i)
+		for (auto it = dfs_visitor.begin(); it != dfs_visitor.end(); ++it)
 		{
-			for (int j = 0; j < dfs_non_connected_component[i].size(); ++j)
-				std::cout << "tree_edge: " << dfs_non_connected_component[i][j] << "\n";
-
-			std::cout << "\n";
+			std::cout << "tree_edge: " << *it << "\n";
 
 		}
 
@@ -129,18 +122,18 @@ namespace tests_libOTe
 	void solveEquation_Test() {
 		std::map<EdgeID, int> mEdgeIdxMap;
 		ccGraph g(10); //init vertext 0,,m
-		
-		auto e1= boost::add_edge(0, 1, g);
+
+		auto e1 = boost::add_edge(0, 1, g);
 		mEdgeIdxMap.insert(pair<EdgeID, int>(e1.first, 1));
 
-		auto e2= boost::add_edge(1, 2, g);
+		auto e2 = boost::add_edge(1, 2, g);
 		mEdgeIdxMap.insert(pair<EdgeID, int>(e2.first, 3));
 
-		auto e3 =  boost::add_edge(2, 0, g);  //triagnle 012  //3
+		auto e3 = boost::add_edge(2, 0, g);  //triagnle 012  //3
 		mEdgeIdxMap.insert(pair<EdgeID, int>(e3.first, 3));
 
 
-	//	g.out_edge_list
+		//	g.out_edge_list
 		std::cout << mEdgeIdxMap[e3.first] << "\n";
 
 	}
@@ -160,111 +153,68 @@ namespace tests_libOTe
 		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
 			inputs[idxItem] = prng.get<block>();
 
-		CuckooGraph graph;
-		graph.init(setSize, 2, 1.5 * setSize);
+		MyVisitor graph;
+		graph.init(setSize, 2, mNumBins * setSize);
 		graph.buidingGraph(inputs);
 		std::cout << "graph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
 
-		/*	for (auto elem = graph.mEdgeIdxMap.begin(); elem != graph.mEdgeIdxMap.end(); ++elem)
-			{
-				std::cout << elem->first << " ==== " << elem->second << "\n";
 
-			}
-	*/
+		boost::depth_first_search(graph.mCuckooGraph, boost::visitor(graph));
 
-		MyVisitor vis;
-		boost::depth_first_search(graph.mCuckooGraph, boost::visitor(vis));
+		auto dfs_circles = graph.GetDfsCircles();
+		auto dfs_visitor = graph.GetDfsVisitor();
 
-		auto dfs_non_connected_component = vis.GetDfsNOConnectedComponents();
-		auto dfs_connected_component = vis.GetDfsConnectedComponent();
-
-		std::cout << "dfs_connected_component.size(): " << dfs_connected_component.size() << "\n";
-		std::cout << "dfs_non_circles.size(): " << dfs_non_connected_component.size() << "\n";
-
-		for (int i = 0; i < dfs_connected_component.size(); ++i)
+		std::cout << "=============\n";
+		for (int i = 0; i < dfs_circles.size(); ++i)
 		{
-			for (int j = 0; j < dfs_connected_component[i].size(); ++j)
+
+			if (dfs_circles[i].size() > 1) //circle
 			{
-				if (dfs_connected_component[i][j].size() > 1) //circle
+
+				for (int k = 0; k < dfs_circles[i].size() - 1; ++k)
 				{
-
-					for (int k = 0; k < dfs_connected_component[i][j].size() - 1; ++k)
-						std::cout << "tree_edge: " << dfs_connected_component[i][j][k] << '\n';
-
-					std::cout << "back_edge: " << dfs_connected_component[i][j][dfs_connected_component[i][j].size() - 1] << "\n\n";
-
-				}
-				else
-					std::cout << "back_edge: " << dfs_connected_component[i][j][dfs_connected_component[i][j].size() - 1] << "\n\n";
-			}
-			std::cout << "=========\n";
-		}
-
-
-
-		for (int i = 0; i < dfs_non_connected_component.size(); ++i)
-		{
-			for (int j = 0; j < dfs_non_connected_component[i].size(); ++j)
-				std::cout << "tree_edge: " << dfs_non_connected_component[i][j] << "\n";
-
-			std::cout << "\n";
-
-		}
-
-
-		for (int i = 0; i < dfs_connected_component.size(); ++i)
-		{
-			for (int j = 0; j < dfs_connected_component[i].size(); ++j)
-			{
-
-
-				for (int k = 0; k < dfs_connected_component[i][j].size(); ++k)
-				{
-					auto key = Edge2StringIncr(dfs_connected_component[i][j][k], graph.mNumBins);
+					std::cout << "tree_edge: " << dfs_circles[i][k] << " == ";
+					auto key = Edge2StringIncr(dfs_circles[i][k], graph.mNumBins);
 					std::cout << graph.mEdgeIdxMap[key] << '\n';
 
 				}
-
 			}
+			std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " == ";
+			auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
+			std::cout << graph.mEdgeIdxMap[key] << "\n===\n\n";
+		}
 
 
-
-
-			/*	for (auto elem = graph.mEdgeIdxMap.begin(); elem != graph.mEdgeIdxMap.end(); ++elem)
-				{
-					std::cout << elem->first << " ==== " << elem->second << "\n";
-
-				}*/
-
-
-				//std::cout << dfs_tree_edges.size() << "  dfs_tree_edges.size()  " << dfs_cnt_tree_edge << '\n';
-				//std::cout << g.m_edges.size() << "  g.m_edges.size \n";
-
-				//mDfs_tree_edges.clear();
-				//mDfs_cnt_tree_edge = 0;
-				//MyVisitor vis;
-				//boost::depth_first_search(graph.cuckooGraph, boost::visitor(vis));
-
-
-				//for (int i = 0; i < mDfs_tree_edges.size(); ++i)
-				//{
-				//	//	std::cout << dfs_tree_edges[i].first << " == " << dfs_tree_edges[i].second << '\n';
-				//}
-
-				//std::cout << mDfs_tree_edges.size() << "  dfs_tree_edges.size()  " << mDfs_cnt_tree_edge << '\n';
-
-
+		for (auto it = dfs_visitor.begin(); it != dfs_visitor.end(); ++it)
+		{
+			std::cout << "tree_edge: " << *it << " == ";
+			auto key = Edge2StringIncr(*it, graph.mNumBins);
+			std::cout << graph.mEdgeIdxMap[key] << "\n";
 
 		}
+		/*	for (int i = 0; i < dfs_connected_component.size(); ++i)
+			{
+				for (int j = 0; j < dfs_connected_component[i].size(); ++j)
+				{
+
+
+					for (int k = 0; k < dfs_connected_component[i][j].size(); ++k)
+					{
+
+					}
+
+				}
+
+			}*/
 
 	}
 	// Driver program 
 	void Gaussian_Elimination_Test()
 	{
 		/* input matrix */
-		
+
 		std::vector < std::vector<bool>> mat(4);
-		mat[0] = { 1,0,0,1,1};
+		mat[0] = { 1,0,0,1,1 };
 		mat[1] = { 1,0,1,1,0 };
 		mat[2] = { 1,0,0,0,0 };
 		mat[3] = { 0,0,0,0,1 };
@@ -273,19 +223,19 @@ namespace tests_libOTe
 
 		auto mat_check = mat;
 		auto y_check = Y;
-		
-		auto x= gaussianElimination(mat,Y);
+
+		auto x = gaussianElimination(mat, Y);
 
 		for (int i = 0; i < mat_check.size(); i++)
 		{
-			block sum=ZeroBlock;
+			block sum = ZeroBlock;
 			for (u64 j = 0; j < mat_check[i].size(); j++)
 			{
 				if (mat_check[i][j])
 					sum = sum ^ x[j];
 
 			}
-			if (memcmp((u8*)& sum, (u8*)& y_check[i], sizeof(block)) != 0)
+			if (neq(sum, y_check[i]))
 			{
 				std::cout << sum << " vs " << y_check[i] << "\n";
 			}
@@ -297,7 +247,7 @@ namespace tests_libOTe
 
 	void bitVector_Test() {
 		PRNG prng(ZeroBlock);
-		auto x= AllOneBlock ^ OneBlock;
+		auto x = AllOneBlock ^ OneBlock;
 		BitVector bit((u8*)& x, sizeof(block));
 		std::cout << "bit = " << bit << "\n";
 
@@ -317,18 +267,19 @@ namespace tests_libOTe
 	{
 		for (u64 i = 0; i < vec.size(); i++)
 		{
-			std::cout << vec[i] <<"";
+			std::cout << vec[i] << "";
 		}
 		std::cout << "\n";
 	}
 
+
 	void Cuckoo_OKVS_Test()
 	{
 
-		u64 setSize = 1 << 4;
-		u64 mNumBins = 1.5 * setSize;
+		u64 setSize = 1<<5;
+		u64 numBin = 1.2 * setSize;
 		std::cout << "input_size = " << setSize << "\n";
-		std::cout << "bin_size = " << mNumBins << "\n";
+		std::cout << "bin_size = " << numBin << "\n";
 		PRNG prng(ZeroBlock);
 
 
@@ -336,113 +287,104 @@ namespace tests_libOTe
 		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
 			inputs[idxItem] = prng.get<block>();
 
-		CuckooGraph graph;
-		graph.init(setSize, 2, 1.5 * setSize);
+
+#if 1
+		MyVisitor graph;
+		graph.init(setSize, 2, numBin);
 		graph.buidingGraph(inputs);
-		std::cout << "graph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
+		std::cout << "\ngraph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
 
-		/*	for (auto elem = graph.mEdgeIdxMap.begin(); elem != graph.mEdgeIdxMap.end(); ++elem)
-			{
-				std::cout << elem->first << " ==== " << elem->second << "\n";
 
-			}
-	*/
+		boost::depth_first_search(graph.mCuckooGraph, boost::visitor(graph));
 
-		MyVisitor vis;
-		boost::depth_first_search(graph.mCuckooGraph, boost::visitor(vis));
+		auto dfs_circles = graph.GetDfsCircles();
+		auto dfs_visitor = graph.GetDfsVisitor();
+		auto dfs_back_edge = graph.GetDfsBackEdge();
 
-		auto dfs_non_connected_component = vis.GetDfsNOConnectedComponents();
-		auto dfs_connected_component = vis.GetDfsConnectedComponent();
+		std::cout << "\ndfs_circles.size(): " << dfs_circles.size();
+		std::cout << "\ndfs_back_edge.size(): " << dfs_back_edge.size();
+		std::cout << "\ndfs_visitor.size(): " << dfs_visitor.size();
 
-		std::cout << "dfs_connected_component.size(): " << dfs_connected_component.size() << "\n";
-		std::cout << "dfs_non_circles.size(): " << dfs_non_connected_component.size() << "\n";
 
-		for (int i = 0; i < dfs_connected_component.size(); ++i)
+		std::cout << "\n=============\n";
+		for (int i = 0; i < dfs_circles.size(); ++i)
 		{
-			for (int j = 0; j < dfs_connected_component[i].size(); ++j)
+
+			if (dfs_circles[i].size() > 1) //circle
 			{
-				if (dfs_connected_component[i][j].size() > 1) //circle
+
+				for (int k = 0; k < dfs_circles[i].size() - 1; ++k)
 				{
-
-					for (int k = 0; k < dfs_connected_component[i][j].size() - 1; ++k)
-						std::cout << "tree_edge: " << dfs_connected_component[i][j][k] << '\n';
-
-					std::cout << "back_edge: " << dfs_connected_component[i][j][dfs_connected_component[i][j].size() - 1] << "\n\n";
-
-				}
-				else
-					std::cout << "back_edge: " << dfs_connected_component[i][j][dfs_connected_component[i][j].size() - 1] << "\n\n";
-			}
-			std::cout << "=========\n";
-		}
-
-
-
-		for (int i = 0; i < dfs_non_connected_component.size(); ++i)
-		{
-			for (int j = 0; j < dfs_non_connected_component[i].size(); ++j)
-				std::cout << "tree_edge: " << dfs_non_connected_component[i][j] << "\n";
-
-			std::cout << "\n";
-
-		}
-
-
-		for (int i = 0; i < dfs_connected_component.size(); ++i)
-		{
-			for (int j = 0; j < dfs_connected_component[i].size(); ++j)
-			{
-
-
-				for (int k = 0; k < dfs_connected_component[i][j].size(); ++k)
-				{
-					auto key = Edge2StringIncr(dfs_connected_component[i][j][k], graph.mNumBins);
+					std::cout << "tree_edge: " << dfs_circles[i][k] << " == ";
+					auto key = Edge2StringIncr(dfs_circles[i][k], graph.mNumBins);
 					std::cout << graph.mEdgeIdxMap[key] << '\n';
 
 				}
-
 			}
-
+			std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " == ";
+			auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
+			std::cout << graph.mEdgeIdxMap[key] << "\n===\n\n";
 		}
 
 
+		for (auto it = dfs_visitor.begin(); it != dfs_visitor.end(); ++it)
+		{
+			std::cout << "tree_edge: " << *it << " == ";
+			auto key = Edge2StringIncr(*it, graph.mNumBins);
+			std::cout << graph.mEdgeIdxMap[key] << "\n";
+
+		}
 
 		//================Create linear equation
-		int mSigma = 40 + 40;
-		std::vector < std::vector<bool>> GaussMatrix;
-		std::vector<block> assocated_values;
 		AES mAesRfunction(prng.get<block>());
+		std::vector<block> functionR(inputs.size());
+		for (int i = 0; i < inputs.size(); i++)
+		{
+			functionR[i] = mAesRfunction.ecbEncBlock(inputs[i]);
+		}
+
+		int mSigma = 40 + 40;
+		std::vector < std::vector<bool>> GaussMatrix, copy_GaussMatrix;
+		std::vector<block> assocated_values, copy_assocated_values; //for test
+
 
 		block equation;
 		block assocated_value;
 
-		for (int i = 0; i < dfs_connected_component.size(); ++i)
+		for (int i = 0; i < dfs_circles.size(); ++i)
 		{
-			for (int j = 0; j < dfs_connected_component[i].size(); ++j) { // each component
-				equation = ZeroBlock;
-				assocated_value = ZeroBlock;
-				for (int k = 0; k < dfs_connected_component[i][j].size(); ++k) // each circle
-				{
-					auto keyEgdeMapping = Edge2StringIncr(dfs_connected_component[i][j][k], graph.mNumBins);
-					auto idx_item_in_circle = graph.mEdgeIdxMap[keyEgdeMapping];
-					block cipher = mAesRfunction.ecbEncBlock(inputs[idx_item_in_circle]);
-					equation = equation ^ cipher;
-					assocated_value = assocated_value ^ inputs[idx_item_in_circle];
-				}
+			equation = ZeroBlock;
+			assocated_value = ZeroBlock;
+			for (int j = 0; j < dfs_circles[i].size(); ++j) { // each circle
+
+				auto keyEgdeMapping = Edge2StringIncr(dfs_circles[i][j], graph.mNumBins);
+				auto idx_item_in_circle = graph.mEdgeIdxMap[keyEgdeMapping];
+				equation = equation ^ functionR[idx_item_in_circle];
+				assocated_value = assocated_value ^ inputs[idx_item_in_circle];
+
 				BitVector coeff((u8*)& equation, mSigma);
 				auto row = bitVector2BoolVector(coeff);
-				print_BoolVector(row);
-				std::cout << coeff << "\n";
+				//print_BoolVector(row);
+				//std::cout << coeff << "\n";
 				GaussMatrix.push_back(row);
 				assocated_values.push_back(assocated_value);
+
+				copy_GaussMatrix.push_back(row); //for test
+				copy_assocated_values.push_back(assocated_value); //for test
 			}
 		}
 
 		//Solution 
-		auto R = gaussianElimination(GaussMatrix, assocated_values);
+		std::vector<block> R(mSigma, ZeroBlock);
 
-		auto copy_GaussMatrix = GaussMatrix; //for checking only
-		auto copy_assocated_values = assocated_values; //for checking only
+		if (GaussMatrix.size() > 0)
+			R = gaussianElimination(GaussMatrix, assocated_values);
+
+		for (size_t i = 0; i < copy_assocated_values.size(); i++)
+		{
+			std::cout << copy_assocated_values[i] << " ==copy_assocated_values== " << assocated_values[i] << "\n";
+
+		}
 
 		for (int i = 0; i < copy_GaussMatrix.size(); i++)
 		{
@@ -451,29 +393,84 @@ namespace tests_libOTe
 			{
 				if (copy_GaussMatrix[i][j])
 					sum = sum ^ R[j];
-
 			}
-			if (memcmp((u8*)& sum, (u8*)& copy_assocated_values[i], sizeof(block)) != 0)
+
+			if (neq(sum, copy_assocated_values[i]))
 			{
-				std::cout << sum << " vs " << copy_assocated_values[i] << "\n";
+				std::cout << sum << " sum vs " << copy_assocated_values[i] << "\n";
+				std::cout << "failed " << i << std::endl;
+				throw UnitTestFail();
 			}
 
 		}
 
 		//================Fill D
+		std::vector<block> L(graph.mNumBins, AllOneBlock);
 
-		for (int i = 0; i < dfs_connected_component.size(); ++i)
+		bool isRoot;
+		for (auto it = dfs_visitor.begin(); it != dfs_visitor.end(); ++it)
 		{
-			for (int j = 0; j < dfs_connected_component[i].size(); ++j) { // each component
+			auto edge = *it;
+			auto keyEgdeMapping = Edge2StringIncr(edge, graph.mNumBins);
+			auto idxItem = graph.mEdgeIdxMap[keyEgdeMapping];
+			
+			bool isRoot = eq(L[edge.m_source], AllOneBlock);
+			if (isRoot) //root
+			{
+				L[edge.m_source] = ZeroBlock;// prng.get<block>();
+				std::cout <<idxItem << " , ";
+
+			}
+			
+			
+
+			//compute h2
+			if (eq(L[edge.m_target], AllOneBlock))
+			{
+				L[edge.m_target] = L[edge.m_source] ^ inputs[idxItem];
+				block valueR = functionR[idxItem];
+				BitVector coeff((u8*)& valueR, mSigma);
+				for (int b = 0; b < coeff.size(); b++)
+				{
+					if (coeff[b])
+						L[edge.m_target] = L[edge.m_target] ^ R[b];
+				}
+			}
+			else {
+				std::cout << " \n " << idxItem << " idx ";
+
+				cout << edge.m_target << " L: " << L[edge.m_target] << " already fixed \n";
+
 			}
 		}
 
-		for (int i = 0; i < dfs_non_connected_component.size(); ++i) //non-circle
+		//==========decode
+		for (int i = 0; i < inputs.size(); ++i)
 		{
-			
+			auto h1 = graph.hashes1[i];
+			auto h2 = graph.hashes2[i];
+			auto x = L[h1] ^ L[h2];
+
+			block valueR = functionR[i];
+			BitVector coeff((u8*)& valueR, mSigma);
+			//std::cout << coeff << "\n";
+			for (int b = 0; b < coeff.size(); b++)
+			{
+				if (coeff[b])
+				{
+					//std::cout << coeff[b] << " coeff[b]\n";
+					x = x ^ R[b];
+				}
+			}
+			if (neq(x, inputs[i]))
+			{
+				std::cout << i << ":" << x << " decode vs " << inputs[i] << "\n";
+			}
+
 		}
 
-	}
 
+#endif
+	}
 
 }

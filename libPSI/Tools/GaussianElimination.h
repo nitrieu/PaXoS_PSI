@@ -82,7 +82,7 @@ namespace osuCrypto {
 	// function to print matrix content at any stage 
 	inline static void printMatrix(std::vector < std::vector<bool>>& mat, std::vector<block>& y)
 	{
-		std::cout << mat.size() << "\n";
+	/*	std::cout << mat.size() << "\n";
 		std::cout << mat[0].size() << "\n";
 
 		for (int i = 0; i < mat.size(); i++, std::cout << ("\n"))
@@ -92,7 +92,7 @@ namespace osuCrypto {
 
 			std::cout << y[i] << " ";
 		}
-		std::cout << ("\n");
+		std::cout << ("\n");*/
 	}
 
 	// function to reduce matrix to r.e.f. 
@@ -192,13 +192,13 @@ namespace osuCrypto {
 				block sum = ZeroBlock;
 				for (int j = idx_non_zero + 1; j < previous_idx_non_zero; j++)
 				{
-					x[j] = prng.get<block>();  // chose random value for all X[from idx_non_zero to previous_idx_non_zero]
+					x[j] = ZeroBlock;// prng.get<block>();  // chose random value for all X[from idx_non_zero to previous_idx_non_zero]
 
-					std::cout << "x[" << j << "]= " << x[j] << "\n";
+					//std::cout << "x[" << j << "]= " << x[j] << "\n";
 					if (mat[i][j])
 						sum = sum ^ x[j];
 
-					std::cout << "sum= " << sum << "\n";
+					//std::cout << "sum= " << sum << "\n";
 
 				}
 
@@ -208,7 +208,7 @@ namespace osuCrypto {
 					if (mat[i][j])
 						sum = sum ^ x[j];
 
-					std::cout << "sum= " << sum << "\n";
+				//	std::cout << "sum= " << sum << "\n";
 				}
 
 				/* divide the RHS by the coefficient of the
@@ -220,9 +220,9 @@ namespace osuCrypto {
 			}
 		}
 
-		std::cout << "\nSolution for the system:\n";
-		for (int i = 0; i < M; i++)
-			std::cout << x[i] << "\n";
+		//std::cout << "\nSolution for the system:\n";
+		//for (int i = 0; i < M; i++)
+		//	std::cout << x[i] << "\n";
 
 		return x;
 	}

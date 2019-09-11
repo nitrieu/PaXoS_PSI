@@ -29,7 +29,6 @@ using namespace std;
 namespace osuCrypto
 {
 	
-
 	typedef boost::adjacency_list<  // adjacency_list is a template depending on :
 		boost::vecS,               //  The container used for egdes : here, std::list.
 		boost::vecS,                //  The container used for vertices: here, std::vector.
@@ -43,16 +42,23 @@ namespace osuCrypto
 	typedef ccGraph::edge_descriptor   EdgeID;
 
 
-	inline static string concateInts(u64 left, u64 right, u64 domain)
-	{
-		auto scale = left * (domain + 1); //scale
-		return (ToString(scale) + ToString(right)); //h1||h2
-	}
-
 	inline static void increasingSwap(u64& left, u64& right)
 	{
 		if (left > right)
 			swap(left, right);
+	}
+
+	inline static string concateInts(u64 left, u64 right, u64 domain)
+	{
+		auto scale = left * (pow(10,floor(log10(domain)) + 1)); //scale
+		return (ToString(scale) + ToString(right)); //h1||h2
+	}
+
+	
+	inline static string concateIntsIncr(u64 left, u64 right, u64 domain)
+	{
+		increasingSwap(left, right);
+		return concateInts(left, right, domain);
 	}
 
 	inline static string Edge2StringIncr(EdgeID edge, u64 domain)
@@ -90,39 +96,46 @@ namespace osuCrypto
 	class MyVisitor : public boost::default_dfs_visitor
 	{
 	private:
-		boost::shared_ptr< std::set<EdgeID>> mDfs_tree_all_edges; // TODO: remove this
+		boost::shared_ptr< std::vector<EdgeID>> mDfs_visitor; // TODO: remove this
 		boost::shared_ptr< std::vector<EdgeID>> mDfs_component;
 		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_non_connected_components;
-		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_connected_component;
+		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_circles;
 		//contain many connected components, each contains many circles, each circle contains manay edges + end at back_edge 
 		boost::shared_ptr< std::vector<std::vector<std::vector<EdgeID>>>> mDfs_connected_components;
-		
-
-		//int a;
-		/*boost::shared_ptr < pair<int, int>> dfs_tree_edge;
-		pair<int, int> dfs_back_edge;*/
-	//boost::shared_ptr < EdgeID> dfs_tree_edge;
-	/*		boost::shared_ptr < EdgeID> dfs_back_edge;*/
+		boost::shared_ptr<std::set<EdgeID>> mDfs_back_edges;
 
 	public:
-	
-		
-
-		MyVisitor() : mDfs_tree_all_edges(new std::set<EdgeID>())
+		MyVisitor() : mDfs_visitor(new std::vector<EdgeID>())
 			, mDfs_component(new std::vector<EdgeID>())
 			, mDfs_non_connected_components(new std::vector<std::vector<EdgeID>>())
-			, mDfs_connected_component(new std::vector<std::vector<EdgeID>>)
-			, mDfs_connected_components(new std::vector<std::vector<std::vector<EdgeID>>>) {}
+			, mDfs_circles(new std::vector<std::vector<EdgeID>>)
+			, mDfs_connected_components(new std::vector<std::vector<std::vector<EdgeID>>>)
+			, mDfs_back_edges(new std::set<EdgeID>()) {}
+
 		
+		AES mAesHasher;
+
+		ccGraph mCuckooGraph;
+		std::map<string, int> mEdgeIdxMap; //TODO: edgeId mapping // std::map<EdgeID, int> mEdgeIdxMap2;
+		int mInputSize, mNumHashs, mNumBins;
+		std::vector<u64> hashes1;
+		std::vector<u64> hashes2;
+		std::vector<string> strHashesIncr;
+		std::set<string> mStrBadItems;
+		std::set<int> mIdxBadItems; //for test
+
+
+		void init(u64 inputSize, u64 numHashs, u64 numBins);
+		void buidingGraph(span<block> items);
 
 		/*void initialize_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
 		std::cout << "initialize_vertex: " << s<< std::endl;
 		}
 		*/
 		void start_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
-			std::cout << "start_vertex: " << s << std::endl;
+			//std::cout << "start_vertex: " << s << std::endl;
 			start_Vertex = s;
-			isConnectedComponent = false;
+		//	isConnectedComponent = false;
 		}
 
 		void discover_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
@@ -130,31 +143,50 @@ namespace osuCrypto
 			//insertOrder.push_back(s);
 			//verticesBFS.emplace(s, parent);
 			//verticesDFS.emplace(s, parent);
-			std::cout << "discover_vertex: " << s << std::endl;
+		//	std::cout << "discover_vertex: " << s << std::endl;
 		}
 		void examine_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
 			//parent = s;
-			std::cout << "examine_vertex: " << s << std::endl;
+			//std::cout << "examine_vertex: " << s << std::endl;
 		}
 		/*void examine_edge(const Graph::edge_descriptor &e, const Graph &g) const {
 		std::cout << "Examine edge: " << e<< std::endl;
 		}*/
 
-		void back_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
+		
+		void tree_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
+		
+			auto strEdge=Edge2StringIncr(e, mNumBins);
+			if (mStrBadItems.find(strEdge) != mStrBadItems.end())  //bad item
+			{
+				std::cout << "back_edge back_edge: " << e << std::endl;
+				mDfs_back_edges->insert(e);
+				mDfs_component->push_back(e); //last is back_edge
+				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles
+				mDfs_component->clear(); //for next circle
+			}
+			else {
+				mDfs_visitor->push_back(e);
+				mDfs_component->push_back(e);
+				std::cout << "tree_edge: " << e << std::endl;
+			}
+		}
 
+		
+
+		void back_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
 
 			// since the graph is undirected, if tree_edge is (0,1) then back_edge is (1,0)
 			//we want to remove this back_edge by remembering dfs_tree_edges, and check the condition in void back_edge
 
-			if (mDfs_tree_all_edges->find(e) == mDfs_tree_all_edges->end())
+		//	if (mDfs_visitor->find(e) == mDfs_visitor->end())
+		  if(std::find(mDfs_visitor->begin(), mDfs_visitor->end(), e) == mDfs_visitor->end())
 			{
-				isConnectedComponent = true;//circle
 				std::cout << "back_edge back_edge: " << e << std::endl;
 				// find a real back_edge => this make a circle
-
+				mDfs_back_edges->insert(e);
 				mDfs_component->push_back(e); //last is back_edge
-				mDfs_connected_component->push_back(*mDfs_component); // add this circle to dfs_circles
-
+				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles
 				mDfs_component->clear(); //for next circle
 				//isCircle->clear(); //for next circle
 			}
@@ -166,70 +198,54 @@ namespace osuCrypto
 
 			std::cout << "back_edge: " << e << std::endl;
 		}
-		void tree_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
-		
-			mDfs_tree_all_edges->insert(e);
-			mDfs_component->push_back(e);
-
-			std::cout << "tree_edge: " << e << std::endl;
-			std::cout << "mDfs_component->size(): " << mDfs_component->size() << std::endl;
-		}
-		std::vector<std::vector<EdgeID>>& GetDfsNOConnectedComponents() const { return *mDfs_non_connected_components; }
-		std::vector<std::vector<std::vector<EdgeID>>>& GetDfsConnectedComponent() const { return *mDfs_connected_components; }
-
-		
-
 		void forward_or_cross_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
 			std::cout << "forward_or_cross_edge: " << e << std::endl;
-		}
-		void finish_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
-			std::cout << "finish_vertex: " << s << std::endl;
-			
-			if (s== start_Vertex)
-			{
-				
-				if (!isConnectedComponent && mDfs_component->size() > 0) //no circle
-				{
-					mDfs_non_connected_components->push_back(*mDfs_component); // 
-					mDfs_component->clear(); //for next circle
-					isConnectedComponent = false;
-				}
+			//if (mDfs_visitor->find(e) == mDfs_visitor->end() && mDfs_back_edges->find(e) == mDfs_back_edges->end())
+			if (std::find(mDfs_visitor->begin(), mDfs_visitor->end(), e) == mDfs_visitor->end()
+				&& mDfs_back_edges->find(e) == mDfs_back_edges->end())
 
-				if (isConnectedComponent)
-				{
-					mDfs_connected_components->push_back(*mDfs_connected_component); // 
-					mDfs_component->clear(); //for next circle
-					mDfs_connected_component->clear(); //for next circle
-					isConnectedComponent = false;
-				}
-				std::cout << "finish_vertex finish_vertex: " << s << std::endl;
+			
+			{
+				std::cout << "back_edge back_edge: " << e << std::endl;
+				// find a real back_edge => this make a circle
+				mDfs_back_edges->insert(e);
+				mDfs_component->push_back(e); //last is back_edge
+				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles
+				mDfs_component->clear(); //for next circle
+				//isCircle->clear(); //for next circle
 			}
 		}
 
-	};
-
-	class CuckooGraph
-	{
-	public:
-
-
-
-		void init(u64 inputSize, u64 numHashs, u64 numBins);
-		void buidingGraph(span<block> items);
-		AES mAesHasher;
-		 std::vector<int> mIdx_inputs_circle_contains_2vertices;
+		std::vector<std::vector<EdgeID>>& GetDfsCircles() const { return *mDfs_circles; }
+		std::set<EdgeID>& GetDfsBackEdge() const { return *mDfs_back_edges; }
+		//std::vector<std::vector<EdgeID>>& GetDfsNOConnectedComponents() const { return *mDfs_non_connected_components; }
+		std::vector<EdgeID>& GetDfsVisitor() const { return *mDfs_visitor; }
 		
-		 ccGraph mCuckooGraph;
-		// std::map<pair<int, int>, int> mEdgeIdxMap;
-		 std::map<string, int> mEdgeIdxMap;
-		 int mInputSize, mNumHashs, mNumBins;
-		 std::vector<u64> mHashes;
+		void finish_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
+			//std::cout << "finish_vertex: " << s << std::endl;
+			
+			//if (s== start_Vertex)
+			//{
+			//	std::cout << "finish_vertex finish_vertex: " << s << std::endl;
+			//	std::cout << "mDfs_component->size(): " << mDfs_component->size() << std::endl;
 
-	private:
+			//	if (mDfs_component->size() > 0) //no circle
+			//	{
+			//		mDfs_non_connected_components->push_back(*mDfs_component); // 
+			//		mDfs_component->clear(); //for next circle
+			//	//	isConnectedComponent = false;
+			//	}
 
-		
-		
-
+			//	if (isConnectedComponent)
+			//	{
+			//		//if(mDfs_component->size() > 0))
+			//		mDfs_connected_components->push_back(*mDfs_circles); // 
+			//		mDfs_component->clear(); //for next circle
+			//		mDfs_circles->clear(); //for next circle
+			//		isConnectedComponent = false;
+			//	}
+			//}
+		}
 
 	};
 }
