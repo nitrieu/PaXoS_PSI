@@ -192,7 +192,7 @@ namespace osuCrypto {
 				block sum = ZeroBlock;
 				for (int j = idx_non_zero + 1; j < previous_idx_non_zero; j++)
 				{
-					x[j] = ZeroBlock;// prng.get<block>();  // chose random value for all X[from idx_non_zero to previous_idx_non_zero]
+					x[j] = prng.get<block>();  // chose random value for all X[from idx_non_zero to previous_idx_non_zero]
 
 					//std::cout << "x[" << j << "]= " << x[j] << "\n";
 					if (mat[i][j])

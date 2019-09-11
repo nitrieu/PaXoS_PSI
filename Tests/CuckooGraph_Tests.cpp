@@ -277,7 +277,7 @@ namespace tests_libOTe
 	{
 
 		u64 setSize = 1<<5;
-		u64 numBin = 1.2 * setSize;
+		u64 numBin = 1.5* setSize;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
 		PRNG prng(ZeroBlock);
@@ -368,11 +368,10 @@ namespace tests_libOTe
 				//std::cout << coeff << "\n";
 				GaussMatrix.push_back(row);
 				assocated_values.push_back(assocated_value);
-
-				copy_GaussMatrix.push_back(row); //for test
-				copy_assocated_values.push_back(assocated_value); //for test
 			}
 		}
+		copy_GaussMatrix = GaussMatrix;//for test
+		copy_assocated_values = assocated_values;
 
 		//Solution 
 		std::vector<block> R(mSigma, ZeroBlock);
@@ -380,11 +379,11 @@ namespace tests_libOTe
 		if (GaussMatrix.size() > 0)
 			R = gaussianElimination(GaussMatrix, assocated_values);
 
-		for (size_t i = 0; i < copy_assocated_values.size(); i++)
+		/*for (size_t i = 0; i < copy_assocated_values.size(); i++)
 		{
 			std::cout << copy_assocated_values[i] << " ==copy_assocated_values== " << assocated_values[i] << "\n";
 
-		}
+		}*/
 
 		for (int i = 0; i < copy_GaussMatrix.size(); i++)
 		{
@@ -417,7 +416,7 @@ namespace tests_libOTe
 			bool isRoot = eq(L[edge.m_source], AllOneBlock);
 			if (isRoot) //root
 			{
-				L[edge.m_source] = ZeroBlock;// prng.get<block>();
+				L[edge.m_source] =  prng.get<block>();
 				std::cout <<idxItem << " , ";
 
 			}
