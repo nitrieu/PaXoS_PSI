@@ -253,24 +253,6 @@ namespace tests_libOTe
 
 	}
 
-	//TODO: optimize
-	inline static  std::vector<bool> bitVector2BoolVector(BitVector& bit_vector) {
-		std::vector<bool> res(bit_vector.size());
-		for (u64 i = 0; i < bit_vector.size(); i++)
-		{
-			res[i] = bit_vector[i];
-		}
-		return res;
-	}
-
-	inline void print_BoolVector(std::vector<bool> vec)
-	{
-		for (u64 i = 0; i < vec.size(); i++)
-		{
-			std::cout << vec[i] << "";
-		}
-		std::cout << "\n";
-	}
 
 
 	void Cuckoo_OKVS_Test()

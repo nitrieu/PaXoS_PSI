@@ -227,8 +227,4 @@ namespace osuCrypto {
 		return x;
 	}
 
-
-	// function to reduce matrix to r.e.f. Returns a value to 
-	// indicate whether matrix is singular or not 
-
 }
