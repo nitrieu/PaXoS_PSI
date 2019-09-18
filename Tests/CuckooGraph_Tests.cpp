@@ -154,7 +154,7 @@ namespace tests_libOTe
 			inputs[idxItem] = prng.get<block>();
 
 		MyVisitor graph;
-		graph.init(setSize, 2, mNumBins * setSize);
+		graph.init(setSize, 2, mNumBins * setSize, 80);
 		graph.buidingGraph(inputs);
 		std::cout << "graph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
 
@@ -259,18 +259,28 @@ namespace tests_libOTe
 	{
 
 		u64 setSize = 1<<5;
-		u64 numBin = 1.5* setSize;
+		u64 numBin = 1.6 * setSize;
+		u64 sigma = 40+40;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
 		PRNG prng(ZeroBlock);
 
 
-		std::vector<block> inputs(setSize);
+		std::vector<block> inputs(setSize), outputs(setSize);
 		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
 			inputs[idxItem] = prng.get<block>();
 
 		MyVisitor graph;
-		Cuckoo_encode(inputs, graph, numBin);
+		Cuckoo_encode(inputs, graph, numBin, sigma);
+		Cuckoo_decode(outputs, graph);
+
+		for (int i = 0; i < inputs.size(); ++i)
+			if (neq(outputs[i], inputs[i]))
+			{
+				std::cout << i << ":" << outputs[i] << " decode vs " << inputs[i] << "\n";
+				throw UnitTestFail();
+
+			}
 
 #if 0
 		MyVisitor graph;

@@ -7,11 +7,16 @@
 
 namespace osuCrypto
 {
-	void MyVisitor::init(u64 inputSize, u64 numHashs, u64 numBins)
+	void MyVisitor::init(u64 inputSize, u64 numHashs, u64 numBins,  u64 sigma)
 	{
 		mInputSize = inputSize;
 		mNumHashs = numHashs;
 		mNumBins = numBins;
+		mSigma = sigma;
+		functionR.resize(inputSize);
+		R.resize(mSigma, ZeroBlock);
+		L.resize(mNumBins, AllOneBlock);
+
 
 	}
 	void MyVisitor::buidingGraph(span<block> inputs)

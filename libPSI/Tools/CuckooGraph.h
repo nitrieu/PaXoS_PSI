@@ -110,15 +110,19 @@ namespace osuCrypto
 		AES mAesHasher;
 		ccGraph mCuckooGraph;
 		std::map<string, int> mEdgeIdxMap; //TODO: edgeId mapping // std::map<EdgeID, int> mEdgeIdxMap2;
-		int mInputSize, mNumHashs, mNumBins;
+		int mInputSize, mNumHashs, mNumBins, mSigma;
 		std::vector<u64> hashes1;
 		std::vector<u64> hashes2;
 		std::vector<string> strHashesIncr;
 		std::set<string> mStrBadItems;
 		std::set<int> mIdxBadItems; //for test
+		std::vector<block> functionR;
+		std::vector<block> R;
+		std::vector<block> L;
 
 
-		void init(u64 inputSize, u64 numHashs, u64 numBins);
+
+		void init(u64 inputSize, u64 numHashs, u64 numBins, u64 sigma);
 		void buidingGraph(span<block> items);
 
 		/*void initialize_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {

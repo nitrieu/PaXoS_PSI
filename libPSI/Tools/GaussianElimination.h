@@ -231,14 +231,13 @@ namespace osuCrypto {
 
 
 
-	inline static void Cuckoo_encode(span<block> inputs, MyVisitor& graph, int numBin)
+	inline static void Cuckoo_encode(span<block> inputs, MyVisitor& graph, int numBin, int sigma)
 	{
 		u64 setSize = inputs.size();
 		PRNG prng(ZeroBlock);
 
-#if 1
 		//MyVisitor graph;
-		graph.init(setSize, 2, numBin);
+		graph.init(setSize, 2, numBin, sigma);
 		graph.buidingGraph(inputs);
 		std::cout << "\ngraph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
 
@@ -285,13 +284,11 @@ namespace osuCrypto {
 
 		//================Create linear equation
 		AES mAesRfunction(prng.get<block>());
-		std::vector<block> functionR(inputs.size());
 		for (int i = 0; i < inputs.size(); i++)
 		{
-			functionR[i] = mAesRfunction.ecbEncBlock(inputs[i]);
+			graph.functionR[i] = mAesRfunction.ecbEncBlock(inputs[i]);
 		}
 
-		int mSigma = 40 + 40;
 		std::vector < std::vector<bool>> GaussMatrix, copy_GaussMatrix;
 		std::vector<block> assocated_values, copy_assocated_values; //for test
 
@@ -307,10 +304,10 @@ namespace osuCrypto {
 
 				auto keyEgdeMapping = Edge2StringIncr(dfs_circles[i][j], graph.mNumBins);
 				auto idx_item_in_circle = graph.mEdgeIdxMap[keyEgdeMapping];
-				equation = equation ^ functionR[idx_item_in_circle];
+				equation = equation ^ graph.functionR[idx_item_in_circle];
 				assocated_value = assocated_value ^ inputs[idx_item_in_circle];
 
-				BitVector coeff((u8*)& equation, mSigma);
+				BitVector coeff((u8*)& equation, graph.mSigma);
 				auto row = bitVector2BoolVector(coeff);
 				//print_BoolVector(row);
 				//std::cout << coeff << "\n";
@@ -322,10 +319,9 @@ namespace osuCrypto {
 		copy_assocated_values = assocated_values;
 
 		//Solution 
-		std::vector<block> R(mSigma, ZeroBlock);
 
 		if (GaussMatrix.size() > 0)
-			R = gaussianElimination(GaussMatrix, assocated_values);
+			graph.R = gaussianElimination(GaussMatrix, assocated_values);
 
 		/*for (size_t i = 0; i < copy_assocated_values.size(); i++)
 		{
@@ -339,7 +335,7 @@ namespace osuCrypto {
 			for (u64 j = 0; j < copy_GaussMatrix[i].size(); j++)
 			{
 				if (copy_GaussMatrix[i][j])
-					sum = sum ^ R[j];
+					sum = sum ^ graph.R[j];
 			}
 
 			if (neq(sum, copy_assocated_values[i]))
@@ -352,7 +348,6 @@ namespace osuCrypto {
 		}
 
 		//================Fill D
-		std::vector<block> L(graph.mNumBins, AllOneBlock);
 
 		bool isRoot;
 		for (auto it = dfs_visitor.begin(); it != dfs_visitor.end(); ++it)
@@ -361,10 +356,10 @@ namespace osuCrypto {
 			auto keyEgdeMapping = Edge2StringIncr(edge, graph.mNumBins);
 			auto idxItem = graph.mEdgeIdxMap[keyEgdeMapping];
 
-			bool isRoot = eq(L[edge.m_source], AllOneBlock);
+			bool isRoot = eq(graph.L[edge.m_source], AllOneBlock);
 			if (isRoot) //root
 			{
-				L[edge.m_source] = prng.get<block>();
+				graph.L[edge.m_source] = prng.get<block>();
 				std::cout << idxItem << " , ";
 
 			}
@@ -372,41 +367,42 @@ namespace osuCrypto {
 
 
 			//compute h2
-			if (eq(L[edge.m_target], AllOneBlock))
+			if (eq(graph.L[edge.m_target], AllOneBlock))
 			{
-				L[edge.m_target] = L[edge.m_source] ^ inputs[idxItem];
-				block valueR = functionR[idxItem];
-				BitVector coeff((u8*)& valueR, mSigma);
+				graph.L[edge.m_target] = graph.L[edge.m_source] ^ inputs[idxItem];
+				block valueR = graph.functionR[idxItem];
+				BitVector coeff((u8*)& valueR, graph.mSigma);
 				for (int b = 0; b < coeff.size(); b++)
 				{
 					if (coeff[b])
-						L[edge.m_target] = L[edge.m_target] ^ R[b];
+						graph.L[edge.m_target] = graph.L[edge.m_target] ^ graph.R[b];
 				}
 			}
 			else {
 				std::cout << " \n " << idxItem << " idx ";
 
-				cout << edge.m_target << " L: " << L[edge.m_target] << " already fixed \n";
+				cout << edge.m_target << " L: " << graph.L[edge.m_target] << " already fixed \n";
 
 			}
 		}
 
+#if 0
 		//==========decode
 		for (int i = 0; i < inputs.size(); ++i)
 		{
 			auto h1 = graph.hashes1[i];
 			auto h2 = graph.hashes2[i];
-			auto x = L[h1] ^ L[h2];
+			auto x = graph.L[h1] ^ graph.L[h2];
 
-			block valueR = functionR[i];
-			BitVector coeff((u8*)& valueR, mSigma);
+			block valueR = graph.functionR[i];
+			BitVector coeff((u8*)& valueR, graph.mSigma);
 			//std::cout << coeff << "\n";
 			for (int b = 0; b < coeff.size(); b++)
 			{
 				if (coeff[b])
 				{
 					//std::cout << coeff[b] << " coeff[b]\n";
-					x = x ^ R[b];
+					x = x ^ graph.R[b];
 				}
 			}
 			if (neq(x, inputs[i]))
@@ -416,8 +412,35 @@ namespace osuCrypto {
 
 		}
 
-
 #endif
+	}
+
+	inline static void Cuckoo_decode(std::vector<block>& outputs, MyVisitor& graph)
+	{
+		//==========decode
+		outputs.resize(graph.mInputSize);
+		for (int i = 0; i < graph.mInputSize; ++i)
+		{
+			auto h1 = graph.hashes1[i];
+			auto h2 = graph.hashes2[i];
+			outputs[i] = graph.L[h1] ^ graph.L[h2];
+
+			block valueR = graph.functionR[i];
+			BitVector coeff((u8*)& valueR, graph.mSigma);
+			//std::cout << coeff << "\n";
+			for (int b = 0; b < coeff.size(); b++)
+			{
+				if (coeff[b])
+				{
+					//std::cout << coeff[b] << " coeff[b]\n";
+					outputs[i] = outputs[i] ^ graph.R[b];
+				}
+			}
+			
+
+		}
+
+
 	}
 
 
