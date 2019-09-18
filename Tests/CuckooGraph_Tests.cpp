@@ -665,23 +665,59 @@ namespace tests_libOTe
 		sender.setBaseOts(baseRecv, baseChoice);
 		recv.setBaseOts(baseSend);
 
-		testNco(sender, numOTs, prng0, sendChl, recv, prng1, recvChl);
+		// perform the init on each of the classes. should be performed concurrently
+		auto thrd = std::thread([&]() {
+			setThreadName("Sender");
+			sender.init(numOTs, prng0, sendChl);
+			});
 
-		auto v = std::async([&] { recv.check(recvChl, ZeroBlock); });
-		try {
-			sender.check(sendChl, ZeroBlock);
+		recv.init(numOTs, prng1, recvChl);
+		thrd.join();
 
-		}
-		catch (...)
+		std::vector<block> inputs(numOTs);
+		prng0.get(inputs.data(), inputs.size());
+
+
+		std::vector<block> encoding1(stepSize), encoding2(stepSize);
+
+		// Get the random OT messages
+		for (u64 i = 0; i < numOTs; i += stepSize)
 		{
-			sendChl.mBase->mLog;
+			auto curStepSize = std::min<u64>(stepSize, numOTs - i);
+
+			for (u64 k = 0; k < curStepSize; ++k)
+			{
+
+				// The receiver MUST encode before the sender. Here we are only calling encode(...) 
+				// for a single i. But the receiver can also encode many i, but should only make one 
+				// call to encode for any given value of i.
+					recv.encode(i + k, &inputs[k], (u8*)& encoding1[k], sizeof(block));
+			}
+
+			// This call will send to the other party the next "curStepSize " corrections to the sender.
+			// If we had made more or less calls to encode above (for contigious i), then we should replace
+			// curStepSize  with however many calls we made. In an extreme case, the reciever can perform
+			// encode for i \in {0, ..., numOTs - 1}  and then call sendCorrection(recvChl, numOTs).
+			recv.sendCorrection(recvChl, curStepSize);
+
+			// receive the next curStepSize  correction values. This allows the sender to now call encode
+			// on the next curStepSize  OTs.
+			sender.recvCorrection(sendChl, curStepSize);
+
+			for (u64 k = 0; k < curStepSize; ++k)
+			{
+				// the sender can now call encode(i, ...) for k \in {0, ..., i}. 
+				// Lets encode the same input and then we should expect to
+				// get the same encoding.
+				sender.encode(i + k, &inputs[k], (u8*)& encoding2[k], sizeof(block));
+
+				// check that we do in fact get the same value
+				if (neq(encoding1[k], encoding2[k]))
+					throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
+				
+			}
 		}
-		v.get();
 
-		auto sender2 = sender.split();
-		auto recv2 = recv.split();
-
-		testNco(*sender2, numOTs, prng0, sendChl, *recv2, prng1, recvChl);
 
 	}
 
