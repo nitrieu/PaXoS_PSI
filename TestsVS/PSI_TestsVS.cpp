@@ -67,6 +67,14 @@ namespace tests_libOTe
 			Cuckoo_BackEdges_Circle_with_Input_Test();
 		}
 
+		TEST_METHOD(PrtyMOt_TestVS)
+		{
+			InitDebugPrinting();
+			PrtyMOt_Test_Impl();
+		}
+
+		
+
 		TEST_METHOD(lable_edge_TestVS)
 		{
 			InitDebugPrinting();
