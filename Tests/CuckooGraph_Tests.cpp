@@ -269,8 +269,10 @@ namespace tests_libOTe
 		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
 			inputs[idxItem] = prng.get<block>();
 
+		MyVisitor graph;
+		Cuckoo_encode(inputs, graph, numBin);
 
-#if 1
+#if 0
 		MyVisitor graph;
 		graph.init(setSize, 2, numBin);
 		graph.buidingGraph(inputs);
