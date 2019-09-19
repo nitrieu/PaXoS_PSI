@@ -263,8 +263,8 @@ namespace tests_libOTe
 	{
 
 		u64 setSize = 1<<9;
-		u64 numBin = 1.8 * setSize;
-		u64 sigma = 42;
+		u64 numBin = 3 * setSize;
+		u64 sigma = 80;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
 		PRNG prng(ZeroBlock);

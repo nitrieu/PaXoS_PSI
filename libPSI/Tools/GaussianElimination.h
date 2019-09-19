@@ -381,9 +381,7 @@ namespace osuCrypto {
 				block valueR = graph.functionR[idxItem];
 
 				BitVector coeff((u8*)& valueR, graph.mSigma);
-				std::cout << " \n " << coeff << " coeff ";
-
-				std::cout << " == " << idxItem << " idx ";
+				//std::cout << " \n " << coeff << " coeff  == " << idxItem << " idx ";
 
 
 				for (int b = 0; b < coeff.size(); b++)
