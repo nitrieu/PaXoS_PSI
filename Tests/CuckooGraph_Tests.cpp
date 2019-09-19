@@ -793,7 +793,7 @@ namespace tests_libOTe
 		thrd.join();
 
 		
-		std::vector<block> encoding1(stepSize), encoding2(stepSize);
+		std::vector<block> encoding1(numOTs), encoding2(numOTs);
 
 		// Get the random OT messages
 		for (u64 i = 0; i < numOTs; i += stepSize)
@@ -806,7 +806,7 @@ namespace tests_libOTe
 				// The receiver MUST encode before the sender. Here we are only calling encode(...) 
 				// for a single i. But the receiver can also encode many i, but should only make one 
 				// call to encode for any given value of i.
-					recv.encode(i + k, &cuckooTables[k], (u8*)& encoding1[k], sizeof(block));
+					recv.encode(i + k, &cuckooTables[i+k], (u8*)& encoding1[i+k], sizeof(block));
 			}
 
 			// This call will send to the other party the next "curStepSize " corrections to the sender.
@@ -824,11 +824,13 @@ namespace tests_libOTe
 				// the sender can now call encode(i, ...) for k \in {0, ..., i}. 
 				// Lets encode the same input and then we should expect to
 				// get the same encoding.
-				sender.encode(i + k, &cuckooTables[k], (u8*)& encoding2[k], sizeof(block));
+
+
+				sender.encode(i + k, &cuckooTables[i+k], (u8*)& encoding2[i+k], sizeof(block));
 
 				//std::cout << encoding1[k] << " vs " << encoding2[k] << "\n";
 				// check that we do in fact get the same value
-				if (neq(encoding1[k], encoding2[k]))
+				if (neq(encoding1[i+k], encoding2[i+k]))
 					throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
 				
 			}
