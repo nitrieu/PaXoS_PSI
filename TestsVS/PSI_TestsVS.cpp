@@ -92,6 +92,19 @@ namespace tests_libOTe
 			Cuckoo_OKVS_Test();
 		}
 
+		TEST_METHOD(PrtyLinearCode_TestVS)
+		{
+			InitDebugPrinting();
+			PrtyLinearCode_Test_Impl();
+		}
+
+		/*TEST_METHOD(LinearCode_TestVS)
+		{
+			InitDebugPrinting();
+			LinearCode_Test_Impl();
+		}
+		
+*/
 		TEST_METHOD(bitVector_TestVS)
 		{
 			InitDebugPrinting();

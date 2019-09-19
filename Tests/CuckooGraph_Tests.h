@@ -10,6 +10,7 @@ namespace tests_libOTe
 	void Cuckoo_OKVS_Test();
 	void bitVector_Test();
 	void PrtyMOt_Test_Impl();
+	void PrtyLinearCode_Test_Impl();
 
 
 }

@@ -47,6 +47,7 @@
 #pragma warning(disable: 4800)
 #endif //  _MSC_VER
 #include "libOTe/Tools/bch511.h"
+#include "Tools/mx_132_by_583.h"
 
 
 using namespace osuCrypto;
@@ -467,7 +468,164 @@ namespace tests_libOTe
 #endif
 	}
 
-	
+
+	void zero_block_ls_bits(osuCrypto::block& blk, size_t bits) {
+		osuCrypto::block mask = osuCrypto::AllOneBlock >> (8 * sizeof(osuCrypto::block) - bits);
+	}
+
+	void PrtyLinearCode_Test_Impl()
+	{
+		PRNG prng(ZeroBlock);
+		LinearCode code;
+		code.load(mx132by583, sizeof(mx132by583));
+
+		u64 plain_txt_bits = code.plaintextBitSize();
+		if (plain_txt_bits != 132) {
+			cout << "Invalid plain text bit-size " << plain_txt_bits << endl;
+			throw UnitTestFail("bad out size reported by code");
+		}
+
+		u64 plain_txt_blocks = code.plaintextBlkSize();
+		if (plain_txt_blocks != 2) {
+			cout << "Invalid plain text block-size " << plain_txt_bits << endl;
+			throw UnitTestFail("bad out size reported by code");
+		}
+
+		u64 code_word_bits = code.codewordBitSize();
+		if (code_word_bits != 583) {
+			cout << "Invalid code word bit-size " << code_word_bits << endl;
+			throw UnitTestFail("bad out size reported by code");
+		}
+
+		u64 code_word_blocks = code.codewordBlkSize();
+		if (code_word_blocks != 5) {
+			cout << "Invalid code word block-size " << code_word_bits << endl;
+			throw UnitTestFail("bad out size reported by code");
+		}
+
+
+		for (size_t testk = 0; testk < 2; ++testk) {
+			cout << "lctest begin" << endl;
+
+			std::vector<block> plainTextA(plain_txt_blocks), codewordA(code_word_blocks);
+			std::vector<block> plainTextB(plain_txt_blocks), codewordB(code_word_blocks);
+			std::vector<block> plainTextC(plain_txt_blocks), codewordC(code_word_blocks);
+
+			for (size_t i = 0; i < plain_txt_blocks; ++i) {
+				plainTextA[i] = prng.get<block>();
+				plainTextB[i] = prng.get<block>();
+				plainTextC[i] = plainTextA[i] ^ plainTextB[i];
+			}
+
+		/*	zero_block_ls_bits(plainTextA[plain_txt_blocks - 1], (8 * sizeof(osuCrypto::block) * plain_txt_blocks) % plain_txt_bits);
+			zero_block_ls_bits(plainTextB[plain_txt_blocks - 1], (8 * sizeof(osuCrypto::block) * plain_txt_blocks) % plain_txt_bits);
+			zero_block_ls_bits(plainTextC[plain_txt_blocks - 1], (8 * sizeof(osuCrypto::block) * plain_txt_blocks) % plain_txt_bits);
+*/
+			code.encode(plainTextA, codewordA);
+			code.encode(plainTextB, codewordB);
+			code.encode(plainTextC, codewordC);
+
+			/*zero_block_ls_bits(codewordA[code_word_blocks - 1], (8 * sizeof(osuCrypto::block) * code_word_blocks) % code_word_bits);
+			zero_block_ls_bits(codewordB[code_word_blocks - 1], (8 * sizeof(osuCrypto::block) * code_word_blocks) % code_word_bits);
+			zero_block_ls_bits(codewordC[code_word_blocks - 1], (8 * sizeof(osuCrypto::block) * code_word_blocks) % code_word_bits);
+*/
+			bool mismatch = false;
+			for (size_t i = 0; i < code_word_blocks; ++i) {
+
+				if (!eq(codewordA[i] ^ codewordB[i], codewordC[i])) {
+					cout << "Test " << testk << " linear mismatch @" << i << endl;
+					mismatch = true;
+				}
+			}
+			if (!mismatch) {
+				cout << "Test " << testk << " linear match." << endl;
+			}
+			else {
+				cout << "A:" << endl;
+				for (size_t i = 0; i < code_word_blocks; ++i) {
+					cout << codewordA[i] << endl;
+	}
+				cout << "B:" << endl;
+				for (size_t i = 0; i < code_word_blocks; ++i) {
+					cout << codewordB[i] << endl;
+				}
+				cout << "C:" << endl;
+				for (size_t i = 0; i < code_word_blocks; ++i) {
+					cout << codewordC[i] << endl;
+				}
+		}
+	}
+
+
+
+#if 0 //BCH
+		code.load(bch511_binary, sizeof(bch511_binary));
+
+		if (code.plaintextBitSize() != 76)
+			throw UnitTestFail("bad input size reported by code");
+
+
+		if (code.codewordBitSize() != 511)
+			throw UnitTestFail("bad out size reported by code");
+
+		std::vector<block>
+			plainText(code.plaintextBlkSize(), AllOneBlock),
+			codeword(code.codewordBlkSize());
+		//gsl::span<u8>ss(plainText);
+		code.encode(plainText, codeword);
+
+		BitVector cw((u8*)codeword.data(), code.codewordBitSize());
+
+		// expect all ones
+		for (size_t i = 0; i < cw.size(); i++)
+		{
+			if (cw[i] == 0)
+			{
+				std::cout << cw << std::endl;
+				std::cout << "expecting all ones" << std::endl;
+				throw UnitTestFail(LOCATION);
+			}
+		}
+
+		BitVector pt("1111111111111111111111111111111111111111111111111101111111111101111111111111");
+		memset(plainText.data(), 0, plainText.size() * sizeof(block));
+		memcpy(plainText.data(), pt.data(), pt.sizeBytes());
+
+
+		code.encode(plainText, codeword);
+		cw.resize(0);
+		cw.append((u8*)codeword.data(), code.codewordBitSize());
+
+
+		BitVector expected("1111111111111111111111111111111111111111111111111101111111111101111111111111101000010001110100011100010110011111110010011010001010000111111001101101110101100000100010010101000110011001111101111100100111000101110000101000000011000100011110011100001101100111111001001011010100010010110001010011000011111010101010010010011101001001100001100010100101001100111000010110011110011110001110001011111101010001101000101010110100011000000011010011110101011001100011111111101001101111001111111101000010000011010111100011100");
+
+		if (cw != expected)
+		{
+			std::cout << cw << std::endl;
+			std::cout << expected << std::endl;
+			throw UnitTestFail(LOCATION);
+		}
+
+
+		code.encode_bch511((u8*)plainText.data(), (u8*)codeword.data());
+		cw.resize(0);
+		cw.append((u8*)codeword.data(), code.codewordBitSize());
+
+
+		expected = BitVector("1111111111111111111111111111111111111111111111111101111111111101111111111111101000010001110100011100010110011111110010011010001010000111111001101101110101100000100010010101000110011001111101111100100111000101110000101000000011000100011110011100001101100111111001001011010100010010110001010011000011111010101010010010011101001001100001100010100101001100111000010110011110011110001110001011111101010001101000101010110100011000000011010011110101011001100011111111101001101111001111111101000010000011010111100011100");
+
+		if (cw != expected)
+		{
+			std::cout << cw << std::endl;
+			std::cout << expected << std::endl;
+			throw UnitTestFail(LOCATION);
+		}
+
+
+#endif
+
+	}
+
 
 
 	void PrtyMOt_Test_Impl()
