@@ -1,12 +1,14 @@
 #include "libOTe/Base/naor-pinkas.h"
 #include "PrtyMOtReceiver.h"
 #include "libOTe/Tools/Tools.h"
-#include "libOTe/Tools/bch511.h"
+//#include "libOTe/Tools/bch511.h"
 #include <cryptoTools/Crypto/RandomOracle.h>
 #include  <mmintrin.h>
 #include "PrtyMDefines.h"
 
 #include <cryptoTools/Common/BitVector.h>
+#include "Tools/mx_132_by_583.h"
+
 using namespace std;
 
 namespace osuCrypto
@@ -343,11 +345,11 @@ namespace osuCrypto
         u64 statSecParam,
         u64 inputBitCount)
     {
-        if (inputBitCount <= 76)
+        if (inputBitCount <= 132)
         {
 
             //mCode.loadTxtFile("C:/Users/peter/repo/libOTe/libOTe/Tools/bch511.txt");
-            mCode.load(bch511_binary, sizeof(bch511_binary));
+            mCode.load(mx132by583, sizeof(mx132by583));
         }
         else
             throw std::runtime_error(LOCATION);

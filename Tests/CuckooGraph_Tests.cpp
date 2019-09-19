@@ -647,13 +647,13 @@ namespace tests_libOTe
 
 
 		LinearCode code;
-		code.load(bch511_binary, sizeof(bch511_binary));
+		code.load(mx132by583, sizeof(mx132by583));
 
 		PrtyMOtSender sender;
 		PrtyMOtReceiver recv;
 
-		sender.configure(true, 40, 50);
-		recv.configure(true, 40, 50);
+		sender.configure(true, 40, 132);
+		recv.configure(true, 40, 132);
 		u64 baseCount = sender.getBaseOTCount();
 		//u64 codeSize = (baseCount + 127) / 128;
 
@@ -717,6 +717,7 @@ namespace tests_libOTe
 				// get the same encoding.
 				sender.encode(i + k, &inputs[k], (u8*)& encoding2[k], sizeof(block));
 
+				std::cout << encoding1[k] << " vs " << encoding2[k] << "\n";
 				// check that we do in fact get the same value
 				if (neq(encoding1[k], encoding2[k]))
 					throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
