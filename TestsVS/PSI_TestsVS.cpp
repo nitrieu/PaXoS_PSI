@@ -98,13 +98,12 @@ namespace tests_libOTe
 			PrtyLinearCode_Test_Impl();
 		}
 
-		/*TEST_METHOD(LinearCode_TestVS)
+		TEST_METHOD(Prty2PSIMOt_TestVS)
 		{
 			InitDebugPrinting();
-			LinearCode_Test_Impl();
+			Prty2PSI_Test_Impl();
 		}
-		
-*/
+
 		TEST_METHOD(bitVector_TestVS)
 		{
 			InitDebugPrinting();

@@ -11,6 +11,7 @@ namespace tests_libOTe
 	void bitVector_Test();
 	void PrtyMOt_Test_Impl();
 	void PrtyLinearCode_Test_Impl();
+	void Prty2PSI_Test_Impl();
 
 
 }
