@@ -164,11 +164,8 @@ namespace osuCrypto
     }
 
 
-    void PrtyMOtSender::encode(
-        u64 otIdx,
-        const void* plaintext,
-        void* dest,
-        u64 destSize)
+    void PrtyMOtSender::otCorrection(
+        u64 otIdx)
     {
 
 #ifndef NDEBUG
@@ -178,12 +175,9 @@ namespace osuCrypto
 
         // compute the codeword. We assume the
         // the codeword is less that 10 block = 1280 bits.
-        std::array<block, 10> codeword = { ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock };
-        memcpy(codeword.data(), plaintext, mInputByteCount);
-        mCode.encode((u8*)codeword.data(), (u8*)codeword.data());
-
+       
 #ifdef PRTY_SHA_HASH
-        RandomOracle  sha1(destSize);
+        //RandomOracle  sha1(destSize);
 #else
         std::array<block, 10> aesBuff;
 #endif
@@ -199,25 +193,21 @@ namespace osuCrypto
         {
             // use vector instructions if we can. You can optimize this
             // for your use case too.
-            block t0 = corVal[0] ^ codeword[0];
-            block t1 = corVal[1] ^ codeword[1];
-            block t2 = corVal[2] ^ codeword[2];
-            block t3 = corVal[3] ^ codeword[3];
+            block t0 = corVal[0] & mChoiceBlks[0];
+            block t1 = corVal[1] & mChoiceBlks[1];
+            block t2 = corVal[2] & mChoiceBlks[2];
+            block t3 = corVal[3] & mChoiceBlks[3];
 
-            t0 = t0 & mChoiceBlks[0];
-            t1 = t1 & mChoiceBlks[1];
-            t2 = t2 & mChoiceBlks[2];
-            t3 = t3 & mChoiceBlks[3];
-
-            codeword[0] = tVal[0] ^ t0;
-            codeword[1] = tVal[1] ^ t1;
-            codeword[2] = tVal[2] ^ t2;
-            codeword[3] = tVal[3] ^ t3;
+            
+			tVal[0] = tVal[0] ^ t0;
+			tVal[1] = tVal[1] ^ t1;
+			tVal[2] = tVal[2] ^ t2;
+			tVal[3] = tVal[3] ^ t3;
 
 #ifdef PRTY_SHA_HASH
             // hash it all to get rid of the correlation.
-            sha1.Update((u8*)codeword.data(), sizeof(block) * mT.stride());
-            sha1.Final((u8*)dest);
+           // sha1.Update((u8*)tVal, sizeof(block) * mT.stride());
+           // sha1.Final((u8*)dest);
             //val = toBlock(hashBuff);
 #else
             //H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
@@ -242,17 +232,16 @@ namespace osuCrypto
             // this is the general case. slightly slower...
             for (u64 i = 0; i < mT.stride(); ++i)
             {
-                block t0 = corVal[i] ^ codeword[i];
-                block t1 = t0 & mChoiceBlks[i];
+                block t1 = corVal[i] & mChoiceBlks[i];
 
-                codeword[i]
+				tVal[i]
                     = tVal[i]
                     ^ t1;
             }
 #ifdef PRTY_SHA_HASH
             // hash it all to get rid of the correlation.
-            sha1.Update((u8*)codeword.data(), sizeof(block) * mT.stride());
-            sha1.Final((u8*)dest);
+           // sha1.Update((u8*)tVal, sizeof(block) * mT.stride());
+            //sha1.Final((u8*)dest);
 #else
             //H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
             mAesFixedKey.ecbEncBlocks(codeword.data(), mT.stride(), aesBuff.data());
@@ -268,6 +257,106 @@ namespace osuCrypto
 #endif
         }
     }
+
+	void PrtyMOtSender::encode(
+		u64 otIdx,
+		const void* plaintext,
+		void* dest,
+		u64 destSize)
+	{
+
+#ifndef NDEBUG
+		if (mInputByteCount == 0)
+			throw std::runtime_error("configure must be called first" LOCATION);
+#endif // !NDEBUG
+
+		// compute the codeword. We assume the
+		// the codeword is less that 10 block = 1280 bits.
+		std::array<block, 10> codeword = { ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock };
+		memcpy(codeword.data(), plaintext, mInputByteCount);
+		mCode.encode((u8*)codeword.data(), (u8*)codeword.data());
+
+#ifdef PRTY_SHA_HASH
+		RandomOracle  sha1(destSize);
+#else
+		std::array<block, 10> aesBuff;
+#endif
+		// the index of the otIdx'th correction value u = t1 + t0 + c(w)
+		// and the associated T value held by the sender.
+		auto* corVal = mCorrectionVals.data() + otIdx * mCorrectionVals.stride();
+		auto* tVal = mT.data() + otIdx * mT.stride();
+
+
+		// This is the hashing phase. Here we are using
+		//  codewords that we computed above.
+		if (mT.stride() == 4)
+		{
+			// use vector instructions if we can. You can optimize this
+			// for your use case too.
+			block t0 =  codeword[0] & mChoiceBlks[0];
+			block t1 = codeword[1] & mChoiceBlks[1];
+			block t2 = codeword[2] & mChoiceBlks[2];
+			block t3 = codeword[3] & mChoiceBlks[3];
+
+
+			codeword[0] = tVal[0] ^ t0;
+			codeword[1] = tVal[1] ^ t1;
+			codeword[2] = tVal[2] ^ t2;
+			codeword[3] = tVal[3] ^ t3;
+
+#ifdef PRTY_SHA_HASH
+			// hash it all to get rid of the correlation.
+			sha1.Update((u8*)codeword.data(), sizeof(block) * mT.stride());
+			sha1.Final((u8*)dest);
+			//val = toBlock(hashBuff);
+#else
+			//H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
+			mAesFixedKey.ecbEncFourBlocks(codeword.data(), aesBuff.data());
+			codeword[0] = codeword[0] ^ aesBuff[0];
+			codeword[1] = codeword[1] ^ aesBuff[1];
+			codeword[2] = codeword[2] ^ aesBuff[2];
+			codeword[3] = codeword[3] ^ aesBuff[3];
+
+			block val = codeword[0] ^ codeword[1];
+			codeword[2] = codeword[2] ^ codeword[3];
+
+			val = val ^ codeword[2];
+
+			mAesFixedKey.ecbEncBlock(val, codeword[0]);
+			val = val ^ codeword[0];
+			memcpy(dest, &val, std::min<u64>(RandomOracle::HashSize, destSize));
+#endif
+		}
+		else
+		{
+			// this is the general case. slightly slower...
+			for (u64 i = 0; i < mT.stride(); ++i)
+			{
+				block t1 = codeword[i] & mChoiceBlks[i];
+
+				codeword[i]
+					= tVal[i]
+					^ t1;
+			}
+#ifdef PRTY_SHA_HASH
+			// hash it all to get rid of the correlation.
+			sha1.Update((u8*)codeword.data(), sizeof(block) * mT.stride());
+			sha1.Final((u8*)dest);
+#else
+			//H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
+			mAesFixedKey.ecbEncBlocks(codeword.data(), mT.stride(), aesBuff.data());
+
+			block val = ZeroBlock;
+			for (u64 i = 0; i < mT.stride(); ++i)
+				val = val ^ codeword[i] ^ aesBuff[i];
+
+
+			mAesFixedKey.ecbEncBlock(val, codeword[0]);
+			val = val ^ codeword[0];
+			memcpy(dest, &val, std::min<u64>(RandomOracle::HashSize, destSize));
+#endif
+		}
+	}
 
     void PrtyMOtSender::configure(
         bool maliciousSecure,
