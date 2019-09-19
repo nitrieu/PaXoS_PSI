@@ -275,8 +275,8 @@ namespace tests_libOTe
 			inputs[idxItem] = prng.get<block>();
 
 		MyVisitor graph;
-		Cuckoo_encode(inputs, L,R, numBin, sigma);
-		Cuckoo_decode(outputs, inputs, L,R);
+		Cuckoo_encode(inputs, L,numBin, sigma);
+		Cuckoo_decode(outputs, inputs, L, numBin);
 
 		for (int i = 0; i < inputs.size(); ++i)
 			if (neq(outputs[i], inputs[i]))
@@ -728,6 +728,8 @@ namespace tests_libOTe
 
 	void Prty2PSI_Test_Impl()
 	{
+		
+#if 1
 		setThreadName("Sender");
 
 		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
@@ -738,16 +740,14 @@ namespace tests_libOTe
 		u64 sigma = 80;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
-		std::vector<block> inputs(setSize), outputs(setSize), L, R;;
+		std::vector<block> inputs(setSize), outputs(setSize), cuckooTables;
 		prng0.get(inputs.data(), inputs.size());
 
-		Cuckoo_encode(inputs, L, R, numBin, sigma);  //Building CUckoo table
+		Cuckoo_encode(inputs, cuckooTables, numBin, sigma);  //Building CUckoo table
 		//Cuckoo_decode(outputs, inputs, L, R);
 
-		u64 numOTs = L.size()+R.size();
-
-		std::vector<block> cuckooTables(L);
-		cuckooTables.insert(cuckooTables.end(), R.begin(), R.end());
+		u64 numOTs = cuckooTables.size();
+		std::cout << "OT = " << numOTs << "\n";
 
 
 		std::string name = "n";
@@ -806,7 +806,7 @@ namespace tests_libOTe
 				// The receiver MUST encode before the sender. Here we are only calling encode(...) 
 				// for a single i. But the receiver can also encode many i, but should only make one 
 				// call to encode for any given value of i.
-					recv.encode(i + k, &cuckooTables[i+k], (u8*)& encoding1[i+k], sizeof(block));
+				recv.encode(i + k, &cuckooTables[k+i], (u8*)& encoding1[k+i], sizeof(block));
 			}
 
 			// This call will send to the other party the next "curStepSize " corrections to the sender.
@@ -824,18 +824,17 @@ namespace tests_libOTe
 				// the sender can now call encode(i, ...) for k \in {0, ..., i}. 
 				// Lets encode the same input and then we should expect to
 				// get the same encoding.
+				sender.encode(i + k, &cuckooTables[k+i], (u8*)& encoding2[i+k], sizeof(block));
 
-
-				sender.encode(i + k, &cuckooTables[i+k], (u8*)& encoding2[i+k], sizeof(block));
-
-				//std::cout << encoding1[k] << " vs " << encoding2[k] << "\n";
+			//	std::cout << encoding1[k+i] << " vs " << encoding2[k+i] << "\n";
 				// check that we do in fact get the same value
-				if (neq(encoding1[i+k], encoding2[i+k]))
+				if (neq(encoding1[i+k], encoding2[k+i]))
 					throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
-				
+
 			}
 		}
 
+#endif
 
 	}
 

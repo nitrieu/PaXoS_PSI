@@ -234,9 +234,9 @@ namespace osuCrypto {
 
 
 
-	inline static void Cuckoo_encode(span<block> inputs, std::vector<block>& L, std::vector<block>& R, int numBin, int sigma)
+	inline static void Cuckoo_encode(span<block> inputs, std::vector<block>& L, int numBin, int sigma)
 	{
-		R.resize(sigma, ZeroBlock);
+		std::vector<block> R(sigma, ZeroBlock);
 		L.resize(numBin, AllOneBlock);
 
 		u64 setSize = inputs.size();
@@ -425,9 +425,11 @@ namespace osuCrypto {
 		}
 
 #endif
+		L.insert(L.end(), R.begin(), R.end());
+
 	}
 
-	inline static void Cuckoo_decode(std::vector<block>& ciphers, span<block> plaintext, span<block> L, span<block> R)
+	inline static void Cuckoo_decode(std::vector<block>& ciphers, span<block> plaintext, span<block> L, u64 numBins)
 	{
 		AES mAesHasher(OneBlock);
 		AES mAesRfunction(ZeroBlock);
@@ -437,8 +439,7 @@ namespace osuCrypto {
 		ciphers.resize(plaintext.size());
 
 
-		u64 numBins = L.size();
-		u64 sigma =R.size();
+		u64 sigma =L.size()- numBins;
 
 		for (int i = 0; i < plaintext.size(); i++)
 			functionR[i] = mAesRfunction.ecbEncBlock(plaintext[i]);
@@ -469,7 +470,7 @@ namespace osuCrypto {
 				if (coeff[b])
 				{
 					//std::cout << coeff[b] << " coeff[b]\n";
-					ciphers[i] = ciphers[i] ^ R[b];
+					ciphers[i] = ciphers[i] ^ L[numBins+b];
 				}
 			}
 			
