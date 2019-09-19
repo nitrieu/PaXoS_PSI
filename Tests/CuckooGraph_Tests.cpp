@@ -690,11 +690,9 @@ namespace tests_libOTe
 
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-
-				// The receiver MUST encode before the sender. Here we are only calling encode(...) 
-				// for a single i. But the receiver can also encode many i, but should only make one 
-				// call to encode for any given value of i.
+				// to access R, you can do recv.mT0
 				recv.encode(i + k, &inputs[k + i], (u8*)& encoding1[k + i], sizeof(block));
+				
 			}
 
 			// This call will send to the other party the next "curStepSize " corrections to the sender.
@@ -709,11 +707,11 @@ namespace tests_libOTe
 
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				// the sender can now call encode(i, ...) for k \in {0, ..., i}. 
-				// Lets encode the same input and then we should expect to
-				// get the same encoding.
+				//correct Q
+				//to access Q, you can do sender.mT
 				sender.otCorrection(i + k);
 				
+				//this one for check oos OT
 				sender.encode(i + k, &inputs[k+i], (u8*)& encoding2[k + i], sizeof(block));
 
 				//std::cout << encoding1[k] << " vs " << encoding2[k] << "\n";
