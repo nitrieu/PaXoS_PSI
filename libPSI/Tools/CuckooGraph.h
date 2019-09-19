@@ -117,9 +117,9 @@ namespace osuCrypto
 		std::set<string> mStrBadItems;
 		std::set<int> mIdxBadItems; //for test
 		std::vector<block> functionR;
-		std::vector<block> R;
+		/*std::vector<block> R;
 		std::vector<block> L;
-
+*/
 
 
 		void init(u64 inputSize, u64 numHashs, u64 numBins, u64 sigma);
@@ -148,7 +148,7 @@ namespace osuCrypto
 			auto strEdge=Edge2StringIncr(e, mNumBins);
 			if (mStrBadItems.find(strEdge) != mStrBadItems.end())  //bad item
 			{
-				std::cout << "back_edge back_edge: " << e << std::endl;
+				//std::cout << "back_edge back_edge: " << e << std::endl;
 				mDfs_back_edges->insert(e);
 				mDfs_component->push_back(e); //last is back_edge
 				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles
@@ -157,7 +157,7 @@ namespace osuCrypto
 			else {
 				mDfs_visitor->push_back(e);
 				mDfs_component->push_back(e);
-				std::cout << "tree_edge: " << e << std::endl;
+				//std::cout << "tree_edge: " << e << std::endl;
 			}
 		}
 		
@@ -167,24 +167,25 @@ namespace osuCrypto
 			// since the graph is undirected, if tree_edge is (0,1) then back_edge is (1,0)
 			//we want to remove this back_edge by remembering dfs_tree_edges, and check the condition in void back_edge
 
-		  if(std::find(mDfs_visitor->begin(), mDfs_visitor->end(), e) == mDfs_visitor->end())
+		  if(std::find(mDfs_visitor->begin(), mDfs_visitor->end(), e) == mDfs_visitor->end() 
+			  && mDfs_back_edges->find(e) == mDfs_back_edges->end())
 			{
-				std::cout << "back_edge back_edge: " << e << std::endl;
+				//std::cout << "back_edge back_edge: " << e << std::endl;
 				mDfs_back_edges->insert(e);
 				mDfs_component->push_back(e); //last is back_edge
 				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles
 				mDfs_component->clear(); //for next circle
 			}
 
-			std::cout << "back_edge: " << e << std::endl;
+			//std::cout << "back_edge: " << e << std::endl;
 		}
 		void forward_or_cross_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
-			std::cout << "forward_or_cross_edge: " << e << std::endl;
+			//std::cout << "forward_or_cross_edge: " << e << std::endl;
 			
 			if (std::find(mDfs_visitor->begin(), mDfs_visitor->end(), e) == mDfs_visitor->end()
 				&& mDfs_back_edges->find(e) == mDfs_back_edges->end())
 			{
-				std::cout << "back_edge back_edge: " << e << std::endl;
+				//std::cout << "back_edge back_edge: " << e << std::endl;
 				mDfs_back_edges->insert(e);
 				mDfs_component->push_back(e); //last is back_edge
 				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles

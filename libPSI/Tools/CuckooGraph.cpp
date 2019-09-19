@@ -14,15 +14,14 @@ namespace osuCrypto
 		mNumBins = numBins;
 		mSigma = sigma;
 		functionR.resize(inputSize);
-		R.resize(mSigma, ZeroBlock);
-		L.resize(mNumBins, AllOneBlock);
+		
 
 
 	}
 	void MyVisitor::buidingGraph(span<block> inputs)
 	{
 		PRNG prng(ZeroBlock);
-		mAesHasher.setKey(prng.get<block>());
+		mAesHasher.setKey(OneBlock);
 	
 		hashes1.resize(inputs.size());
 		hashes2.resize(inputs.size());

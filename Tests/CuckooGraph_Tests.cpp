@@ -144,10 +144,12 @@ namespace tests_libOTe
 	void Cuckoo_BackEdges_Circle_with_Input_Test()
 	{
 
-		u64 setSize = 1 << 4;
-		u64 mNumBins = 1.5 * setSize;
+		u64 setSize = 1 << 9;
+		u64 numBin = 1.8 * setSize;
+		u64 sigma = 42;
+
 		std::cout << "input_size = " << setSize << "\n";
-		std::cout << "bin_size = " << mNumBins << "\n";
+		std::cout << "bin_size = " << numBin << "\n";
 		PRNG prng(ZeroBlock);
 
 
@@ -156,7 +158,7 @@ namespace tests_libOTe
 			inputs[idxItem] = prng.get<block>();
 
 		MyVisitor graph;
-		graph.init(setSize, 2, mNumBins * setSize, 80);
+		graph.init(setSize, 2, numBin, sigma);
 		graph.buidingGraph(inputs);
 		std::cout << "graph.cuckooGraph.m_edges.size(): " << graph.mCuckooGraph.m_edges.size();
 
@@ -260,27 +262,27 @@ namespace tests_libOTe
 	void Cuckoo_OKVS_Test()
 	{
 
-		u64 setSize = 1<<5;
-		u64 numBin = 1.6 * setSize;
-		u64 sigma = 40+40;
+		u64 setSize = 1<<9;
+		u64 numBin = 1.8 * setSize;
+		u64 sigma = 42;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
 		PRNG prng(ZeroBlock);
 
 
-		std::vector<block> inputs(setSize), outputs(setSize);
+		std::vector<block> inputs(setSize), outputs(setSize), L, R;
 		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
 			inputs[idxItem] = prng.get<block>();
 
 		MyVisitor graph;
-		Cuckoo_encode(inputs, graph, numBin, sigma);
-		Cuckoo_decode(outputs, graph);
+		Cuckoo_encode(inputs, L,R, numBin, sigma);
+		Cuckoo_decode(outputs, inputs, L,R);
 
 		for (int i = 0; i < inputs.size(); ++i)
 			if (neq(outputs[i], inputs[i]))
 			{
-				std::cout << i << ":" << outputs[i] << " decode vs " << inputs[i] << "\n";
-				throw UnitTestFail();
+				std::cout << i << ":" << outputs[i] << " decodedecode vs " << inputs[i] << "\n";
+				//throw UnitTestFail();
 
 			}
 
@@ -468,11 +470,6 @@ namespace tests_libOTe
 #endif
 	}
 
-
-	void zero_block_ls_bits(osuCrypto::block& blk, size_t bits) {
-		osuCrypto::block mask = osuCrypto::AllOneBlock >> (8 * sizeof(osuCrypto::block) - bits);
-	}
-
 	void PrtyLinearCode_Test_Impl()
 	{
 		PRNG prng(ZeroBlock);
@@ -627,7 +624,6 @@ namespace tests_libOTe
 	}
 
 
-
 	void PrtyMOt_Test_Impl()
 	{
 		setThreadName("Sender");
@@ -636,6 +632,9 @@ namespace tests_libOTe
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 		u64 numOTs = 128 * 2;
+		std::vector<block> inputs(numOTs);
+		prng0.get(inputs.data(), inputs.size());
+
 
 
 		std::string name = "n";
@@ -680,10 +679,7 @@ namespace tests_libOTe
 		recv.init(numOTs, prng1, recvChl);
 		thrd.join();
 
-		std::vector<block> inputs(numOTs);
-		prng0.get(inputs.data(), inputs.size());
-
-
+		
 		std::vector<block> encoding1(stepSize), encoding2(stepSize);
 
 		// Get the random OT messages
@@ -722,6 +718,108 @@ namespace tests_libOTe
 				if (neq(encoding1[k], encoding2[k]))
 					throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
 				
+			}
+		}
+
+
+	}
+
+
+
+	void PrtyCuckooMOt_Test_Impl()
+	{
+		setThreadName("Sender");
+
+		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
+
+		u64 numOTs = 128 * 2;
+		std::vector<block> inputs(numOTs);
+		prng0.get(inputs.data(), inputs.size());
+
+
+
+		std::string name = "n";
+		IOService ios(0);
+		Session ep0(ios, "localhost", 1212, SessionMode::Server, name);
+		Session ep1(ios, "localhost", 1212, SessionMode::Client, name);
+		auto recvChl = ep1.addChannel(name, name);
+		auto sendChl = ep0.addChannel(name, name);
+
+
+		LinearCode code;
+		code.load(mx132by583, sizeof(mx132by583));
+
+		PrtyMOtSender sender;
+		PrtyMOtReceiver recv;
+
+		sender.configure(true, 40, 132);
+		recv.configure(true, 40, 132);
+		u64 baseCount = sender.getBaseOTCount();
+		//u64 codeSize = (baseCount + 127) / 128;
+
+		std::vector<block> baseRecv(baseCount);
+		std::vector<std::array<block, 2>> baseSend(baseCount);
+		BitVector baseChoice(baseCount);
+		baseChoice.randomize(prng0);
+
+		prng0.get((u8*)baseSend.data()->data(), sizeof(block) * 2 * baseSend.size());
+		for (u64 i = 0; i < baseCount; ++i)
+		{
+			baseRecv[i] = baseSend[i][baseChoice[i]];
+		}
+
+		sender.setBaseOts(baseRecv, baseChoice);
+		recv.setBaseOts(baseSend);
+
+		// perform the init on each of the classes. should be performed concurrently
+		auto thrd = std::thread([&]() {
+			setThreadName("Sender");
+			sender.init(numOTs, prng0, sendChl);
+			});
+
+		recv.init(numOTs, prng1, recvChl);
+		thrd.join();
+
+
+		std::vector<block> encoding1(stepSize), encoding2(stepSize);
+
+		// Get the random OT messages
+		for (u64 i = 0; i < numOTs; i += stepSize)
+		{
+			auto curStepSize = std::min<u64>(stepSize, numOTs - i);
+
+			for (u64 k = 0; k < curStepSize; ++k)
+			{
+
+				// The receiver MUST encode before the sender. Here we are only calling encode(...) 
+				// for a single i. But the receiver can also encode many i, but should only make one 
+				// call to encode for any given value of i.
+				recv.encode(i + k, &inputs[k], (u8*)& encoding1[k], sizeof(block));
+			}
+
+			// This call will send to the other party the next "curStepSize " corrections to the sender.
+			// If we had made more or less calls to encode above (for contigious i), then we should replace
+			// curStepSize  with however many calls we made. In an extreme case, the reciever can perform
+			// encode for i \in {0, ..., numOTs - 1}  and then call sendCorrection(recvChl, numOTs).
+			recv.sendCorrection(recvChl, curStepSize);
+
+			// receive the next curStepSize  correction values. This allows the sender to now call encode
+			// on the next curStepSize  OTs.
+			sender.recvCorrection(sendChl, curStepSize);
+
+			for (u64 k = 0; k < curStepSize; ++k)
+			{
+				// the sender can now call encode(i, ...) for k \in {0, ..., i}. 
+				// Lets encode the same input and then we should expect to
+				// get the same encoding.
+				sender.encode(i + k, &inputs[k], (u8*)& encoding2[k], sizeof(block));
+
+				std::cout << encoding1[k] << " vs " << encoding2[k] << "\n";
+				// check that we do in fact get the same value
+				if (neq(encoding1[k], encoding2[k]))
+					throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
+
 			}
 		}
 
