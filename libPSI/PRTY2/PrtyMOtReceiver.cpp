@@ -76,6 +76,8 @@ namespace osuCrypto
         mT0.resize(numOtExt, numCols / 128);
         mT1.resize(numOtExt, numCols / 128);
 
+		mRy = Matrix<block>();
+
         // An extra debugging check that can be used. Each one
         // gets marked as used, makes use we don't encode twice.
 #ifndef NDEBUG
@@ -183,6 +185,42 @@ namespace osuCrypto
 
         return std::unique_ptr<NcoOtExtReceiver>(raw);
     }
+
+	void PrtyMOtReceiver::encode_prty(
+		u64 idx,
+		const void* input,
+		void* dest,
+		u64 destSize)
+	{
+		block* ryVal = mRy.data() + mRy.stride() * idx;
+
+		std::cout << idx << ": " << ryVal[0] << " - " << ryVal[1]<<" recv.ryVal\n";
+
+
+#ifdef PRTY_SHA_HASH
+			RandomOracle  sha1(destSize);
+			// now hash it to remove the correlation.
+			sha1.Update((u8*)ryVal, mRy.stride() * sizeof(block));
+			sha1.Final((u8*)dest);
+#else
+			//H(x) = AES_f(H'(x)) + H'(x), where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
+			mAesFixedKey.ecbEncFourBlocks(t0Val, codeword.data());
+
+			codeword[0] = codeword[0] ^ t0Val[0];
+			codeword[1] = codeword[1] ^ t0Val[1];
+			codeword[2] = codeword[2] ^ t0Val[2];
+			codeword[3] = codeword[3] ^ t0Val[3];
+
+			val = codeword[0] ^ codeword[1];
+			codeword[2] = codeword[2] ^ codeword[3];
+
+			val = val ^ codeword[2];
+
+			mAesFixedKey.ecbEncBlock(val, codeword[0]);
+			val = val ^ codeword[0];
+#endif
+	}
+
 
     void PrtyMOtReceiver::encode(
         u64 otIdx,

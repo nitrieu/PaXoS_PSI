@@ -93,6 +93,7 @@ namespace osuCrypto
         mCorrectionVals.resize(numOTExt, mGens.size() / 128);
         mT = Matrix<block>();
         mT.resize(numOTExt, mGens.size() / 128);
+		mQx = Matrix<block>();
 
         // The receiver will send us correction values, this is the index of
         // the next one they will send.
@@ -257,6 +258,110 @@ namespace osuCrypto
 #endif
         }
     }
+
+#if 1
+	void PrtyMOtSender::encode_prty(
+		u64 idx,
+		const void* plaintext,
+		void* dest,
+		u64 destSize)
+	{
+
+#ifndef NDEBUG
+		if (mInputByteCount == 0)
+			throw std::runtime_error("configure must be called first" LOCATION);
+#endif // !NDEBUG
+
+		// compute the codeword. We assume the
+		// the codeword is less that 10 block = 1280 bits.
+		std::array<block, 10> codeword = { ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock };
+		memcpy(codeword.data(), plaintext, mInputByteCount);
+		mCode.encode((u8*)codeword.data(), (u8*)codeword.data());
+
+#ifdef PRTY_SHA_HASH
+		RandomOracle  sha1(destSize);
+#else
+		std::array<block, 10> aesBuff;
+#endif
+		// the index of the otIdx'th correction value u = t1 + t0 + c(w)
+		// and the associated T value held by the sender.
+		auto* qxVal = mQx.data() + idx * mQx.stride();
+
+
+		// This is the hashing phase. Here we are using
+		//  codewords that we computed above.
+		if (mT.stride() == 4)
+		{
+			// use vector instructions if we can. You can optimize this
+			// for your use case too.
+			block t0 = codeword[0] & mChoiceBlks[0];
+			block t1 = codeword[1] & mChoiceBlks[1];
+			block t2 = codeword[2] & mChoiceBlks[2];
+			block t3 = codeword[3] & mChoiceBlks[3];
+
+
+			codeword[0] = qxVal[0] ^ t0;
+			codeword[1] = qxVal[1] ^ t1;
+			codeword[2] = qxVal[2] ^ t2;
+			codeword[3] = qxVal[3] ^ t3;
+
+#ifdef PRTY_SHA_HASH
+			// hash it all to get rid of the correlation.
+			sha1.Update((u8*)codeword.data(), sizeof(block) * mQx.stride());
+			sha1.Final((u8*)dest);
+			//val = toBlock(hashBuff);
+#else
+			//H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
+			mAesFixedKey.ecbEncFourBlocks(codeword.data(), aesBuff.data());
+			codeword[0] = codeword[0] ^ aesBuff[0];
+			codeword[1] = codeword[1] ^ aesBuff[1];
+			codeword[2] = codeword[2] ^ aesBuff[2];
+			codeword[3] = codeword[3] ^ aesBuff[3];
+
+			block val = codeword[0] ^ codeword[1];
+			codeword[2] = codeword[2] ^ codeword[3];
+
+			val = val ^ codeword[2];
+
+			mAesFixedKey.ecbEncBlock(val, codeword[0]);
+			val = val ^ codeword[0];
+			memcpy(dest, &val, std::min<u64>(RandomOracle::HashSize, destSize));
+#endif
+		}
+		else
+		{
+			// this is the general case. slightly slower...
+			for (u64 i = 0; i < mQx.stride(); ++i)
+			{
+				block t1 = codeword[i] & mChoiceBlks[i];
+
+				codeword[i]
+					= qxVal[i]
+					^ t1;
+			}
+
+			std::cout << idx << ": " << codeword[0] << " - " << codeword[1] << " sender.codeword\n";
+
+#ifdef PRTY_SHA_HASH
+			// hash it all to get rid of the correlation.
+			sha1.Update((u8*)codeword.data(), sizeof(block) * mQx.stride());
+			sha1.Final((u8*)dest);
+#else
+			//H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
+			mAesFixedKey.ecbEncBlocks(codeword.data(), mT.stride(), aesBuff.data());
+
+			block val = ZeroBlock;
+			for (u64 i = 0; i < mT.stride(); ++i)
+				val = val ^ codeword[i] ^ aesBuff[i];
+
+
+			mAesFixedKey.ecbEncBlock(val, codeword[0]);
+			val = val ^ codeword[0];
+			memcpy(dest, &val, std::min<u64>(RandomOracle::HashSize, destSize));
+#endif
+		}
+	}
+#endif
 
 	void PrtyMOtSender::encode(
 		u64 otIdx,

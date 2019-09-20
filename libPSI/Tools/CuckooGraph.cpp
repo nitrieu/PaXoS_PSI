@@ -45,13 +45,13 @@ namespace osuCrypto
 			if (p == mEdgeIdxMap.end())
 			{
 				mEdgeIdxMap.emplace(pair<string, int>(strHashesIncr[idxItem], idxItem));
-				std::cout << "mEdgeIdxMap: " << strHashesIncr[idxItem] << " === " << idxItem << std::endl;
+				//std::cout << "mEdgeIdxMap: " << strHashesIncr[idxItem] << " === " << idxItem << std::endl;
 			}
 			else
 			{
 				mStrBadItems.insert(strHashesIncr[idxItem]);
 				mIdxBadItems.insert(idxItem); // for test
-				std::cout << "mIdxBadItems============ " << idxItem << std::endl;
+				//std::cout << "mIdxBadItems============ " << idxItem << std::endl;
 
 			}
 		}

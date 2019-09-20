@@ -33,7 +33,7 @@ namespace osuCrypto
         u64 mCorrectionIdx, mInputByteCount;
 
         std::vector<std::array<PRNG, 2>> mGens;
-        Matrix<block> mT0;
+        Matrix<block> mT0, mRy;
         Matrix<block> mT1;
         Matrix<block> mW;
 
@@ -53,6 +53,12 @@ namespace osuCrypto
             span<std::array<block, 2>> baseRecvOts) override;
 
         void init(u64 numOtExt, PRNG& prng, Channel& chl) override;
+
+		void encode_prty(
+			u64 idx,
+			const void* inputword,
+			void* dest,
+			u64 destSize);
 
         using NcoOtExtReceiver::encode;
         void encode(

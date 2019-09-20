@@ -671,55 +671,50 @@ namespace tests_libOTe
 		sender.setBaseOts(baseRecv, baseChoice);
 		recv.setBaseOts(baseSend);
 
+		std::vector<block> encoding1(numOTs), encoding2(numOTs);
 		// perform the init on each of the classes. should be performed concurrently
 		auto thrd = std::thread([&]() {
 			setThreadName("Sender");
 			sender.init(numOTs, prng0, sendChl);
+
+			// Get the random OT messages
+			for (u64 i = 0; i < numOTs; i += stepSize)
+			{
+				auto curStepSize = std::min<u64>(stepSize, numOTs - i);
+				sender.recvCorrection(sendChl, curStepSize);
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					sender.otCorrection(i + k);
+					//this one for check oos OT
+					sender.encode(i + k, &inputs[k + i], (u8*)& encoding2[k + i], sizeof(block));
+				}
+			}
 			});
 
 		recv.init(numOTs, prng1, recvChl);
-		thrd.join();
-
-
-		std::vector<block> encoding1(numOTs), encoding2(numOTs);
 
 		// Get the random OT messages
 		for (u64 i = 0; i < numOTs; i += stepSize)
 		{
 			auto curStepSize = std::min<u64>(stepSize, numOTs - i);
-
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				// to access R, you can do recv.mT0
 				recv.encode(i + k, &inputs[k + i], (u8*)& encoding1[k + i], sizeof(block));
-				
 			}
-
-			// This call will send to the other party the next "curStepSize " corrections to the sender.
-			// If we had made more or less calls to encode above (for contigious i), then we should replace
-			// curStepSize  with however many calls we made. In an extreme case, the reciever can perform
-			// encode for i \in {0, ..., numOTs - 1}  and then call sendCorrection(recvChl, numOTs).
 			recv.sendCorrection(recvChl, curStepSize);
+		}
+		thrd.join();
 
-			// receive the next curStepSize  correction values. This allows the sender to now call encode
-			// on the next curStepSize  OTs.
-			sender.recvCorrection(sendChl, curStepSize);
 
-			for (u64 k = 0; k < curStepSize; ++k)
-			{
-				//correct Q
-				//to access Q, you can do sender.mT
-				sender.otCorrection(i + k);
-				
-				//this one for check oos OT
-				sender.encode(i + k, &inputs[k+i], (u8*)& encoding2[k + i], sizeof(block));
 
-				//std::cout << encoding1[k] << " vs " << encoding2[k] << "\n";
+		// Get the random OT messages
+		for (u64 i = 0; i < numOTs; i ++)
+		{
 				// check that we do in fact get the same value
-				if (neq(encoding1[k], encoding2[k]))
-				//	throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
-					std::cout << encoding1[k] << " vs " << encoding2[k] << "\n";
-
+			if (neq(encoding1[i], encoding2[i]))
+			{
+				std::cout << encoding1[i] << " vs " << encoding2[i] << "\n";
+				throw UnitTestFail("ot[" + ToString(i) + "] not equal " LOCATION);
 			}
 		}
 
@@ -730,15 +725,15 @@ namespace tests_libOTe
 	void Prty2PSI_Test_Impl()
 	{
 		
-#if 1
+
 		setThreadName("Sender");
 
 		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
-		u64 setSize = 1 << 6;
-		u64 numBin = 3 * setSize;
-		u64 sigma = 80;
+		u64 setSize = 1 << 5;
+		u64 numBin = 2.9 * setSize;
+		u64 sigma = 40;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
 		std::vector<block> inputs(setSize), outputs(setSize), cuckooTables;
@@ -747,9 +742,9 @@ namespace tests_libOTe
 		Cuckoo_encode(inputs, cuckooTables, numBin, sigma);  //Building CUckoo table
 		//Cuckoo_decode(outputs, inputs, L, R);
 
+//=========================OT========================
 		u64 numOTs = cuckooTables.size();
 		std::cout << "OT = " << numOTs << "\n";
-
 
 		std::string name = "n";
 		IOService ios(0);
@@ -784,59 +779,99 @@ namespace tests_libOTe
 		sender.setBaseOts(baseRecv, baseChoice);
 		recv.setBaseOts(baseSend);
 
+		std::vector<block> oosEncoding1(numOTs), oosEncoding2(numOTs);
+
+
 		// perform the init on each of the classes. should be performed concurrently
 		auto thrd = std::thread([&]() {
 			setThreadName("Sender");
 			sender.init(numOTs, prng0, sendChl);
+			
+			// Get the random OT messages
+			for (u64 i = 0; i < numOTs; i += stepSize)
+			{
+				auto curStepSize = std::min<u64>(stepSize, numOTs - i);
+				sender.recvCorrection(sendChl, curStepSize);
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					sender.otCorrection(i + k);
+					//std::cout << i + k << ": " << sender.mT[i + k][0] << "  sender.mT[i + k][0] vs ";// << " vs " << prtyEncoding2[i] << "\n";
+					sender.encode(i + k, &cuckooTables[k + i], (u8*)& oosEncoding2[i + k], sizeof(block));
+					//std::cout << sender.mT[i + k][0] << " \n";
+				}
+			}
 			});
 
+
 		recv.init(numOTs, prng1, recvChl);
-		thrd.join();
-
-		
-		std::vector<block> encoding1(numOTs), encoding2(numOTs);
-
-		// Get the random OT messages
 		for (u64 i = 0; i < numOTs; i += stepSize)
 		{
 			auto curStepSize = std::min<u64>(stepSize, numOTs - i);
-
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
+				//std::cout << i + k << ": " << recv.mT0[i + k][0] <<"  recv.mT0[i + k][0] vs " ;// << " vs " << prtyEncoding2[i] << "\n";
+				recv.encode(i + k, &cuckooTables[k + i], (u8*)& oosEncoding1[k + i], sizeof(block));
+				//std::cout << recv.mT0[i + k][0] << " \n";
 
-				// The receiver MUST encode before the sender. Here we are only calling encode(...) 
-				// for a single i. But the receiver can also encode many i, but should only make one 
-				// call to encode for any given value of i.
-				recv.encode(i + k, &cuckooTables[k+i], (u8*)& encoding1[k+i], sizeof(block));
 			}
 
-			// This call will send to the other party the next "curStepSize " corrections to the sender.
-			// If we had made more or less calls to encode above (for contigious i), then we should replace
-			// curStepSize  with however many calls we made. In an extreme case, the reciever can perform
-			// encode for i \in {0, ..., numOTs - 1}  and then call sendCorrection(recvChl, numOTs).
 			recv.sendCorrection(recvChl, curStepSize);
+		}
 
-			// receive the next curStepSize  correction values. This allows the sender to now call encode
-			// on the next curStepSize  OTs.
-			sender.recvCorrection(sendChl, curStepSize);
+		thrd.join();
 
-			for (u64 k = 0; k < curStepSize; ++k)
+		// Check OOS 
+		for (u64 i = 0; i < numOTs; i++)
+		{
+			// check that we do in fact get the same value
+			if (neq(oosEncoding1[i], oosEncoding2[i]))
 			{
-				// the sender can now call encode(i, ...) for k \in {0, ..., i}. 
-				// Lets encode the same input and then we should expect to
-				// get the same encoding.
-				sender.otCorrection(i + k);
-				sender.encode(i + k, &cuckooTables[k+i], (u8*)& encoding2[i+k], sizeof(block));
-
-			//	std::cout << encoding1[k+i] << " vs " << encoding2[k+i] << "\n";
-				// check that we do in fact get the same value
-				if (neq(encoding1[i+k], encoding2[k+i]))
-					throw UnitTestFail("ot[" + ToString(i + k) + "] not equal " LOCATION);
-
+				std::cout << oosEncoding1[i] << " vs " << oosEncoding2[i] << "\n";
+				throw UnitTestFail("ot[" + ToString(i) + "] not equal " LOCATION);
 			}
 		}
 
-#endif
+		//=====================compute PSI encoding
+		std::vector<block> prtyEncoding1(inputs.size()), prtyEncoding2(inputs.size());
+
+		//Sender
+		Cuckoo_decode(sender.mQx, inputs, sender.mT, numBin,sigma);
+		std::cout << sender.mQx[0][0] << " sender.mQx\n";
+
+		
+		for (u64 i = 0; i < inputs.size(); i += stepSize)
+		{
+			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
+			for (u64 k = 0; k < curStepSize; ++k)
+			{
+				sender.encode_prty(i + k, &inputs[k + i], (u8*)& prtyEncoding1[k + i], sizeof(block));
+			}
+		}
+
+		//==========receiver
+		Cuckoo_decode(recv.mRy, inputs, recv.mT0, numBin, sigma);
+		std::cout << recv.mRy[0][0] << " recv.mRy\n";
+
+
+		for (u64 i = 0; i < inputs.size(); i += stepSize)
+		{
+			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
+			for (u64 k = 0; k < curStepSize; ++k)
+			{
+				recv.encode_prty(i + k, &inputs[k + i], (u8*)& prtyEncoding2[k + i], sizeof(block));
+			}
+		}
+
+		// Check PRTY encoding 
+		for (u64 i = 0; i < inputs.size(); i++)
+		{
+			// check that we do in fact get the same value
+			if (neq(prtyEncoding1[i], prtyEncoding2[i]))
+			{
+				std::cout << i << ": " << prtyEncoding1[i] << " vs " << prtyEncoding2[i] << "\n";
+				//throw UnitTestFail("prty[" + ToString(i) + "] not equal " LOCATION);
+			}
+		}
 
 	}
 

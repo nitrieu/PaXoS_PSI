@@ -36,7 +36,7 @@ namespace osuCrypto {
         std::vector<PRNG> mGens;
         BitVector mBaseChoiceBits;
         std::vector<block> mChoiceBlks;
-        Matrix<block> mT, mCorrectionVals;
+        Matrix<block> mT, mCorrectionVals, mQx;
         u64 mCorrectionIdx, mInputByteCount;
 
 
@@ -59,6 +59,13 @@ namespace osuCrypto {
 
 		void otCorrection(
 			u64 otIdx);
+		
+
+		void encode_prty(
+				u64 idx,
+				const void* codeWord,
+				void* dest,
+				u64 destSize);
 
         using NcoOtExtSender::encode;
 

@@ -4,6 +4,8 @@
 #include "cryptoTools/Common/BitVector.h"
 
 #include "cryptoTools/Common/MatrixView.h"
+#include <cryptoTools/Common/Matrix.h>
+
 //#include <mutex>
 #include <atomic>
 
@@ -419,7 +421,7 @@ namespace osuCrypto {
 			}
 			if (neq(x, inputs[i]))
 			{
-				std::cout << i << ":" << x << " decode vs " << inputs[i] << "\n";
+				std::cout << i << ":" << x << " decode failed vs " << inputs[i] << "\n";
 			}
 
 		}
@@ -429,14 +431,14 @@ namespace osuCrypto {
 
 	}
 
-	inline static void Cuckoo_decode(std::vector<block>& ciphers, span<block> plaintext, span<block> L, u64 numBins)
+	inline static void Cuckoo_decode(std::vector<block>& outputs, span<block> plaintext, span<block> L, u64 numBins)
 	{
 		AES mAesHasher(OneBlock);
 		AES mAesRfunction(ZeroBlock);
 		std::vector<block> functionR(plaintext.size());
 		std::vector<u64> hashes1(plaintext.size());
 		std::vector<u64> hashes2(plaintext.size());
-		ciphers.resize(plaintext.size());
+		outputs.resize(plaintext.size());
 
 
 		u64 sigma =L.size()- numBins;
@@ -460,7 +462,7 @@ namespace osuCrypto {
 		{
 			auto h1 = hashes1[i];
 			auto h2 = hashes2[i];
-			ciphers[i] = L[h1] ^ L[h2];
+			outputs[i] = L[h1] ^ L[h2];
 
 			block valueR = functionR[i];
 			BitVector coeff((u8*)& valueR, sigma);
@@ -470,7 +472,7 @@ namespace osuCrypto {
 				if (coeff[b])
 				{
 					//std::cout << coeff[b] << " coeff[b]\n";
-					ciphers[i] = ciphers[i] ^ L[numBins+b];
+					outputs[i] = outputs[i] ^ L[numBins+b];
 				}
 			}
 			
@@ -479,6 +481,78 @@ namespace osuCrypto {
 
 
 	}
+
+	inline static void Cuckoo_decode(Matrix<block>& outputs, span<block> plaintext, Matrix<block>& L, u64 numBins, u64 sigma)
+	{
+#if 1
+		AES mAesHasher(OneBlock);
+		AES mAesRfunction(ZeroBlock);
+		std::vector<block> functionR(plaintext.size());
+		std::vector<u64> hashes1(plaintext.size());
+		std::vector<u64> hashes2(plaintext.size());
+
+		outputs.resize(plaintext.size(), L.stride()); // row, col]
+
+		std::cout << outputs.size() << " outputs " << outputs.stride() << "\n";
+		std::cout << L.rows() << " L.rows() " << L.stride() << "\n";
+		std::cout << sigma << " sigma " << numBins << " numBins\n";
+
+		
+
+
+		for (int i = 0; i < plaintext.size(); i++)
+			functionR[i] = mAesRfunction.ecbEncBlock(plaintext[i]);
+
+
+		for (int idxItem = 0; idxItem < plaintext.size(); idxItem++)
+		{
+			block cipher = mAesHasher.ecbEncBlock(plaintext[idxItem]);
+			u64 hh1 = _mm_extract_epi64(cipher, 0);
+			u64 hh2 = _mm_extract_epi64(cipher, 1);
+
+			hashes1[idxItem] = hh1 % numBins; //1st 64 bits for finding bin location
+			hashes2[idxItem] = hh2 % numBins; //2nd 64 bits for finding alter bin location
+		}
+
+		//==========decode
+		for (int i = 0; i < plaintext.size(); ++i)
+		{
+			auto h1 = hashes1[i]; //row
+			auto h2 = hashes2[i];
+
+			block* lVal_h1 = L.data() + L.stride() * h1;
+			block* lVal_h2 = L.data() + L.stride() * h2;
+
+			block* cVal = outputs.data() + outputs.stride() * i;
+
+			for (u64 j = 0; j < L.stride(); ++j) // for all colums
+			{
+				cVal[j] = lVal_h1[j] ^ lVal_h2[j];
+			}
+
+			block valueR = functionR[i];
+			BitVector coeff((u8*)& valueR, sigma);
+			//std::cout << sigma << "  sigma\n";
+			for (int b = 0; b < sigma; b++)
+			{
+				if (coeff[b])
+				{
+					//std::cout << coeff[b] << " coeff[b]\n";
+					block* lVal_b = L.data() + L.stride() * (numBins + b);
+					for (u64 j = 0; j < L.stride(); ++j)
+					{
+						//std::cout <<b <<" == " << i << " = " << j  <<  " row col\n";
+
+						cVal[j] = cVal[j] ^ lVal_b[j];
+					}
+				}
+			}
+		}
+
+#endif
+	}
+
+
 
 
 }
