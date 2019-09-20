@@ -875,20 +875,22 @@ namespace tests_libOTe
 		//=====================compute PSI encoding============
 		std::vector<block> prtyEncoding1(inputs.size()), prtyEncoding2(inputs.size());
 
-		//=====Sender
-		Cuckoo_decode( inputs, sender.mQx, sender.mT, numBin,sigma); //geting Decode(Q,x)
-		std::cout << sender.mQx[0][0] << " sender.mQx\n";
+		thrd = std::thread([&]() {
+			//=====Sender
+			Cuckoo_decode(inputs, sender.mQx, sender.mT, numBin, sigma); //geting Decode(Q,x)
+			std::cout << sender.mQx[0][0] << " sender.mQx\n";
 
-		
-		for (u64 i = 0; i < inputs.size(); i += stepSize)
-		{
-			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
-			for (u64 k = 0; k < curStepSize; ++k)
+
+			for (u64 i = 0; i < inputs.size(); i += stepSize)
 			{
-				//compute prtyEncoding1= H2(x, Decode(Q,x) +C(H1(x))*s)
-				sender.encode_prty(i + k, &yInputs[k + i], (u8*)& prtyEncoding1[k + i], sizeof(block));
+				auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					//compute prtyEncoding1= H2(x, Decode(Q,x) +C(H1(x))*s)
+					sender.encode_prty(i + k, &yInputs[k + i], (u8*)& prtyEncoding1[k + i], sizeof(block));
+				}
 			}
-		}
+		});
 
 		//==========receiver
 		Cuckoo_decode(inputs, recv.mRy, recv.mT0, numBin, sigma); //Decode(R,y)
@@ -904,6 +906,7 @@ namespace tests_libOTe
 				recv.encode_prty(i + k, &inputs[k + i], (u8*)& prtyEncoding2[k + i], sizeof(block));
 			}
 		}
+		thrd.join();
 
 		// Check PRTY encoding 
 		for (u64 i = 0; i < inputs.size(); i++)
