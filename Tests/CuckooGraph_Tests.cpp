@@ -908,7 +908,7 @@ namespace tests_libOTe
 			if (neq(prtyEncoding1[i], prtyEncoding2[i]))
 			{
 				std::cout << i << ": " << prtyEncoding1[i] << " vs " << prtyEncoding2[i] << "\n";
-				throw UnitTestFail("prty[" + ToString(i) + "] not equal " LOCATION);
+				throw UnitTestFail("prty[" + ToString(i) + "]  not equal " LOCATION);
 			}
 		}
 
