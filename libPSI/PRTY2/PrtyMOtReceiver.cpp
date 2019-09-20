@@ -194,7 +194,7 @@ namespace osuCrypto
 	{
 		block* ryVal = mRy.data() + mRy.stride() * idx;
 
-		std::cout << idx << ": " << ryVal[0] << " - " << ryVal[1]<<" recv.ryVal\n";
+		//std::cout << idx << ": " << ryVal[0] << " - " << ryVal[1]<<" recv.ryVal\n";
 
 
 #ifdef PRTY_SHA_HASH

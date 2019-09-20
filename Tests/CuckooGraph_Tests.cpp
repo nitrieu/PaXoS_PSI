@@ -223,7 +223,17 @@ namespace tests_libOTe
 		mat[2] = { 1,0,0,0,0 };
 		mat[3] = { 0,0,0,0,1 };
 
-		std::vector<block> Y{ _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 4), _mm_set_epi64x(0, 3), _mm_set_epi64x(0, 2) };
+		std::vector<std::array<block, prty2SuperBlkSize>> Y(4);
+
+		Y[0][0] = _mm_set_epi64x(0, 4);
+		Y[1][0] = _mm_set_epi64x(0, 4);
+		Y[2][0] = _mm_set_epi64x(0, 3);
+		Y[3][0] = _mm_set_epi64x(0, 2);
+
+		for (int i = 1; i < Y.size(); ++i)
+			for (int k = 1; k < prty2SuperBlkSize; ++k)
+				Y[i][k] = ZeroBlock;
+
 
 		auto mat_check = mat;
 		auto y_check = Y;
@@ -232,17 +242,24 @@ namespace tests_libOTe
 
 		for (int i = 0; i < mat_check.size(); i++)
 		{
-			block sum = ZeroBlock;
+			std::array<block, prty2SuperBlkSize> sum;
+			for (int k = 0; k < prty2SuperBlkSize; ++k)
+				sum[k] = ZeroBlock;
+
 			for (u64 j = 0; j < mat_check[i].size(); j++)
 			{
 				if (mat_check[i][j])
-					sum = sum ^ x[j];
+					for (int k = 0; k < prty2SuperBlkSize; ++k)
+						sum[k] = sum[k] ^ x[j][k];
 
 			}
-			if (neq(sum, y_check[i]))
-			{
-				std::cout << sum << " vs " << y_check[i] << "\n";
-			}
+			for (int k = 0; k < prty2SuperBlkSize; ++k)
+				if (neq(sum[k], y_check[i][k]))
+				{
+					std::cout << sum[k] << " sum fail " << y_check[i][k] << "\n";
+					throw UnitTestFail();
+
+				}
 
 		}
 
@@ -270,19 +287,25 @@ namespace tests_libOTe
 		PRNG prng(ZeroBlock);
 
 
-		std::vector<block> inputs(setSize), outputs(setSize), L, R;
-		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
-			inputs[idxItem] = prng.get<block>();
+		std::vector<block> xInputs(setSize);
+		std::vector<std::array<block, prty2SuperBlkSize>> yInputs(setSize), yOutputs(setSize), tblCuckoo;
 
-		MyVisitor graph;
-		Cuckoo_encode(inputs, L,numBin, sigma);
-		Cuckoo_decode(outputs, inputs, L, numBin);
+		for (int idxItem = 0; idxItem < xInputs.size(); idxItem++)
+		{
+			xInputs[idxItem] = prng.get<block>();
+			for (int k = 0; k < prty2SuperBlkSize; k++)
+				yInputs[idxItem][k] = xInputs[idxItem];
+		}
 
-		for (int i = 0; i < inputs.size(); ++i)
-			if (neq(outputs[i], inputs[i]))
+		Cuckoo_encode(xInputs, yInputs, tblCuckoo,numBin, sigma);
+		Cuckoo_decode( xInputs, yOutputs, tblCuckoo, numBin);
+
+		for (int i = 0; i < xInputs.size(); ++i)
+			for (int k = 0; k < prty2SuperBlkSize; k++)
+			if (neq(yOutputs[i][k], yInputs[i][k]))
 			{
-				std::cout << i << ":" << outputs[i] << " decodedecode vs " << inputs[i] << "\n";
-				//throw UnitTestFail();
+				std::cout << i << ":" << yOutputs[i][k] << " decodedecode vs " << yInputs[i][k] << "\n";
+				throw UnitTestFail();
 
 			}
 
@@ -436,7 +459,7 @@ namespace tests_libOTe
 			else {
 				std::cout << " \n " << idxItem << " idx ";
 
-				cout << edge.m_target << " L: " << L[edge.m_target] << " already fixed \n";
+				cout << edge.m_target << " tblCuckoo: " << L[edge.m_target] << " already fixed \n";
 
 			}
 		}
@@ -633,11 +656,15 @@ namespace tests_libOTe
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 		u64 numOTs = 128 * 2;
-		std::vector<block> inputs(numOTs);
-		prng0.get(inputs.data(), inputs.size());
+		std::vector<std::array<block, prty2SuperBlkSize>> inputs(numOTs);
+		//prng0.get(inputs.data(), prty2SuperBlkSize*inputs.size());
 
-
-
+		for (int i = 0; i < inputs.size(); i++)
+			for (int k = 0; k < prty2SuperBlkSize; k++)
+			{
+				inputs[i][k] = prng0.get<block>();
+			//	std::cout << inputs[0][k] << "\n";
+			}
 		std::string name = "n";
 		IOService ios(0);
 		Session ep0(ios, "localhost", 1212, SessionMode::Server, name);
@@ -736,11 +763,18 @@ namespace tests_libOTe
 		u64 sigma = 40;
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
-		std::vector<block> inputs(setSize), outputs(setSize), cuckooTables;
+		std::vector<block> inputs(setSize);
 		prng0.get(inputs.data(), inputs.size());
 
-		Cuckoo_encode(inputs, cuckooTables, numBin, sigma);  //Building CUckoo table
-		//Cuckoo_decode(outputs, inputs, L, R);
+		std::vector<std::array<block, prty2SuperBlkSize>> yInputs(setSize), cuckooTables;
+
+		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
+		{
+			for (int k = 0; k < prty2SuperBlkSize; k++)
+				yInputs[idxItem][k] = inputs[idxItem];  // H1(x)
+		}
+
+		Cuckoo_encode(inputs, yInputs, cuckooTables, numBin, sigma);
 
 //=========================OT========================
 		u64 numOTs = cuckooTables.size();
@@ -796,6 +830,8 @@ namespace tests_libOTe
 				{
 					sender.otCorrection(i + k);
 					//std::cout << i + k << ": " << sender.mT[i + k][0] << "  sender.mT[i + k][0] vs ";// << " vs " << prtyEncoding2[i] << "\n";
+					
+					// For OOS test only
 					sender.encode(i + k, &cuckooTables[k + i], (u8*)& oosEncoding2[i + k], sizeof(block));
 					//std::cout << sender.mT[i + k][0] << " \n";
 				}
@@ -831,11 +867,12 @@ namespace tests_libOTe
 			}
 		}
 
-		//=====================compute PSI encoding
+		//=========================================================
+		//=====================compute PSI encoding============
 		std::vector<block> prtyEncoding1(inputs.size()), prtyEncoding2(inputs.size());
 
-		//Sender
-		Cuckoo_decode(sender.mQx, inputs, sender.mT, numBin,sigma);
+		//=====Sender
+		Cuckoo_decode( inputs, sender.mQx, sender.mT, numBin,sigma); //geting Decode(Q,x)
 		std::cout << sender.mQx[0][0] << " sender.mQx\n";
 
 		
@@ -844,12 +881,13 @@ namespace tests_libOTe
 			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				sender.encode_prty(i + k, &inputs[k + i], (u8*)& prtyEncoding1[k + i], sizeof(block));
+				//compute prtyEncoding1= Decode(Q,x) +C(H(x1))*s
+				sender.encode_prty(i + k, &yInputs[k + i], (u8*)& prtyEncoding1[k + i], sizeof(block));
 			}
 		}
 
 		//==========receiver
-		Cuckoo_decode(recv.mRy, inputs, recv.mT0, numBin, sigma);
+		Cuckoo_decode(inputs, recv.mRy, recv.mT0, numBin, sigma); //Decode(R,y)
 		std::cout << recv.mRy[0][0] << " recv.mRy\n";
 
 
@@ -858,6 +896,7 @@ namespace tests_libOTe
 			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
+				
 				recv.encode_prty(i + k, &inputs[k + i], (u8*)& prtyEncoding2[k + i], sizeof(block));
 			}
 		}
@@ -869,7 +908,7 @@ namespace tests_libOTe
 			if (neq(prtyEncoding1[i], prtyEncoding2[i]))
 			{
 				std::cout << i << ": " << prtyEncoding1[i] << " vs " << prtyEncoding2[i] << "\n";
-				//throw UnitTestFail("prty[" + ToString(i) + "] not equal " LOCATION);
+				throw UnitTestFail("prty[" + ToString(i) + "] not equal " LOCATION);
 			}
 		}
 

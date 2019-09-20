@@ -340,7 +340,7 @@ namespace osuCrypto
 					^ t1;
 			}
 
-			std::cout << idx << ": " << codeword[0] << " - " << codeword[1] << " sender.codeword\n";
+			//std::cout << idx << ": " << codeword[0] << " - " << codeword[1] << " sender.codeword\n";
 
 #ifdef PRTY_SHA_HASH
 			// hash it all to get rid of the correlation.
@@ -378,7 +378,14 @@ namespace osuCrypto
 		// compute the codeword. We assume the
 		// the codeword is less that 10 block = 1280 bits.
 		std::array<block, 10> codeword = { ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock };
+		
 		memcpy(codeword.data(), plaintext, mInputByteCount);
+		
+		//for (int i = 0; i < (mInputByteCount+ sizeof(block)-1)/sizeof(block); i++)
+		//	std::cout << codeword[i] << " - ";
+		//
+		//std::cout << "\n";
+
 		mCode.encode((u8*)codeword.data(), (u8*)codeword.data());
 
 #ifdef PRTY_SHA_HASH
