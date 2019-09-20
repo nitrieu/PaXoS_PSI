@@ -194,12 +194,15 @@ namespace osuCrypto
 	{
 		block* ryVal = mRy.data() + mRy.stride() * idx;
 
+		
+		
 		//std::cout << idx << ": " << ryVal[0] << " - " << ryVal[1]<<" recv.ryVal\n";
 
 
 #ifdef PRTY_SHA_HASH
 			RandomOracle  sha1(destSize);
 			// now hash it to remove the correlation.
+			sha1.Update((u8*)input, sizeof(block));
 			sha1.Update((u8*)ryVal, mRy.stride() * sizeof(block));
 			sha1.Final((u8*)dest);
 #else

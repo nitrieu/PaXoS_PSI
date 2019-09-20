@@ -344,6 +344,7 @@ namespace osuCrypto
 
 #ifdef PRTY_SHA_HASH
 			// hash it all to get rid of the correlation.
+			sha1.Update((u8*)plaintext, sizeof(block));
 			sha1.Update((u8*)codeword.data(), sizeof(block) * mQx.stride());
 			sha1.Final((u8*)dest);
 #else

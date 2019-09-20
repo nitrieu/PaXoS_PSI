@@ -896,7 +896,7 @@ namespace tests_libOTe
 			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				
+				// compute H2(y, Decode(R,y))
 				recv.encode_prty(i + k, &inputs[k + i], (u8*)& prtyEncoding2[k + i], sizeof(block));
 			}
 		}
