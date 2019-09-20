@@ -101,7 +101,7 @@ namespace tests_libOTe
 		TEST_METHOD(Prty2PSIMOt_TestVS)
 		{
 			InitDebugPrinting();
-			Prty2PSI_Test_Impl();
+			Prty2Psi_Test_Impl();
 		}
 
 		TEST_METHOD(bitVector_TestVS)

@@ -749,20 +749,19 @@ namespace tests_libOTe
 	}
 
 
-	void Prty2PSI_Test_Impl()
+	void Prty2Psi_Test_Impl()
 	{
-		
-
 		setThreadName("Sender");
-
 		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 		u64 setSize = 1 << 5;
 		u64 numBin = 2.9 * setSize;
 		u64 sigma = 40;
+		
 		std::cout << "input_size = " << setSize << "\n";
 		std::cout << "bin_size = " << numBin << "\n";
+		
 		std::vector<block> inputs(setSize);
 		prng0.get(inputs.data(), inputs.size());
 
@@ -774,9 +773,13 @@ namespace tests_libOTe
 				yInputs[idxItem][k] = inputs[idxItem];  // H1(x)
 		}
 
+		// Generate a cuckoo table
 		Cuckoo_encode(inputs, yInputs, cuckooTables, numBin, sigma);
 
-//=========================OT========================
+		//===================================================
+		//=========================OOS========================
+		//===================================================
+
 		u64 numOTs = cuckooTables.size();
 		std::cout << "OT = " << numOTs << "\n";
 
@@ -799,6 +802,7 @@ namespace tests_libOTe
 		u64 baseCount = sender.getBaseOTCount();
 		//u64 codeSize = (baseCount + 127) / 128;
 
+		//Base OT
 		std::vector<block> baseRecv(baseCount);
 		std::vector<std::array<block, 2>> baseSend(baseCount);
 		BitVector baseChoice(baseCount);
@@ -881,7 +885,7 @@ namespace tests_libOTe
 			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				//compute prtyEncoding1= Decode(Q,x) +C(H(x1))*s
+				//compute prtyEncoding1= H2(x, Decode(Q,x) +C(H1(x))*s)
 				sender.encode_prty(i + k, &yInputs[k + i], (u8*)& prtyEncoding1[k + i], sizeof(block));
 			}
 		}
@@ -896,7 +900,7 @@ namespace tests_libOTe
 			auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				// compute H2(y, Decode(R,y))
+				// compute prtyEncoding1=H2(y, Decode(R,y))
 				recv.encode_prty(i + k, &inputs[k + i], (u8*)& prtyEncoding2[k + i], sizeof(block));
 			}
 		}
