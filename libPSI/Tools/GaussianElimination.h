@@ -119,7 +119,7 @@ namespace osuCrypto {
 		{
 			// Initialize maximum value and index for pivot 
 			int i_max = rowId;
-			std::cout << "rowId " << rowId << " = 0 \n";
+			//std::cout << "rowId " << rowId << " = 0 \n";
 
 			bool v_max = mat[i_max][colIdx];
 
@@ -136,7 +136,7 @@ namespace osuCrypto {
 			* will lead to a division-by-zero later. */
 			if (!v_max) //all values at colum k =0 => skip this column 
 			{
-				std::cout << "diag " << colIdx << " = 0 \n";
+				//std::cout << "diag " << colIdx << " = 0 \n";
 				colIdx++;
 				continue;
 			}
@@ -236,7 +236,7 @@ namespace osuCrypto {
 				for (int k = 0; k < prty2SuperBlkSize; k++)
 					x[idx_non_zero][k] = (y[i][k] ^ sum[k]);
 				
-				std::cout << "xx[" << idx_non_zero << "][0]= " << x[idx_non_zero][0] << "\n";
+				//std::cout << "xx[" << idx_non_zero << "][0]= " << x[idx_non_zero][0] << "\n";
 
 				previous_idx_non_zero = idx_non_zero;
 			}
@@ -434,7 +434,7 @@ namespace osuCrypto {
 				}
 		}
 
-#if 1
+#if 0
 		//==========decode
 		std::array<block, prty2SuperBlkSize> x;
 		for (int i = 0; i < xInputs.size(); ++i)

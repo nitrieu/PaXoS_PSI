@@ -49,7 +49,7 @@ namespace osuCrypto
 				//mStrBadItems.insert(strHashesIncr[idxItem]);
 				//mIdxBadItems.insert(idxItem); // for test
 				mBadEdges.insert({ hashes1[idxItem],hashes2[idxItem] });
-				std::cout << "mIdxBadItems============ " << idxItem << std::endl;
+				std::cout << hashes1[idxItem]<<", " <<hashes2[idxItem] << " mIdxBadItems============ " << idxItem << std::endl;
 
 			}
 		}
