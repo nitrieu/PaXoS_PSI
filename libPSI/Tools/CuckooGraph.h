@@ -100,18 +100,15 @@ namespace osuCrypto
 		boost::shared_ptr< std::vector<EdgeID>> mDfs_component;
 		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_circles;
 		boost::shared_ptr<std::set<EdgeID>> mDfs_back_edges;
-		//boost::shared_ptr<std::set<std::set<u64>>> mBadEdges;
 
 	public:
 		MyVisitor() : mDfs_visitor(new std::vector<EdgeID>())
 			, mDfs_component(new std::vector<EdgeID>())
 			, mDfs_circles(new std::vector<std::vector<EdgeID>>())
 			, mDfs_back_edges(new std::set<EdgeID>())
-			//, mBadEdges(new std::set<std::set<u64>>())
 		{}
 
 		
-		AES mAesHasher;
 		ccGraph mCuckooGraph;
 		
 		int mInputSize, mNumHashs, mNumBins, mSigma;

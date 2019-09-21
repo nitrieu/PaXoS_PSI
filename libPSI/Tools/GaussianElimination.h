@@ -255,14 +255,8 @@ namespace osuCrypto {
 		std::vector<std::array<block, prty2SuperBlkSize>> R(sigma);
 		tblCuckoo.resize(numBin);
 		std::vector<block> functionR(xInputs.size());
-
-		//================Create linear equation
-		AES mAesRfunction(ZeroBlock);
-		for (int i = 0; i < xInputs.size(); i++)
-		{
-			functionR[i] = mAesRfunction.ecbEncBlock(xInputs[i]);
-		}
-
+		mAesFixedKey.ecbEncBlocks(xInputs.data(), xInputs.size(), functionR.data()); // use diff key for R
+		
 		
 		for (int j = 0; j < prty2SuperBlkSize; j++)
 		{
@@ -477,25 +471,21 @@ namespace osuCrypto {
 
 	inline static void Cuckoo_decode(span<block> xInputs, std::vector<std::array<block, prty2SuperBlkSize>>& outputs, span<std::array<block, prty2SuperBlkSize>> tblCuckoo, u64 numBins)
 	{
-		AES mAesHasher(OneBlock);
-		AES mAesRfunction(ZeroBlock);
 		std::vector<block> functionR(xInputs.size());
 		std::vector<u64> hashes1(xInputs.size());
 		std::vector<u64> hashes2(xInputs.size());
 		outputs.resize(xInputs.size());
+		u64 sigma = tblCuckoo.size() - numBins;
 
+		std::vector<block> ciphers(xInputs.size());
+		mAesFixedKey.ecbEncBlocks(xInputs.data(), xInputs.size(), ciphers.data());
+		mAesFixedKey.ecbEncBlocks(xInputs.data(), xInputs.size(), functionR.data()); // use diff key for R
 
-		u64 sigma =tblCuckoo.size()- numBins;
-
-		for (int i = 0; i < xInputs.size(); i++)
-			functionR[i] = mAesRfunction.ecbEncBlock(xInputs[i]);
-		
 
 		for (int idxItem = 0; idxItem < xInputs.size(); idxItem++)
 		{
-			block cipher = mAesHasher.ecbEncBlock(xInputs[idxItem]);
-			u64 hh1 = _mm_extract_epi64(cipher, 0);
-			u64 hh2 = _mm_extract_epi64(cipher, 1);
+			u64 hh1 = _mm_extract_epi64(ciphers[idxItem], 0);
+			u64 hh2 = _mm_extract_epi64(ciphers[idxItem], 1);
 
 			hashes1[idxItem] = hh1 % numBins; //1st 64 bits for finding bin location
 			hashes2[idxItem] = hh2 % numBins; //2nd 64 bits for finding alter bin location
@@ -530,8 +520,6 @@ namespace osuCrypto {
 	inline static void Cuckoo_decode(span<block> xInputs, Matrix<block>& yOutputs, Matrix<block>& tblCuckoo, u64 numBins, u64 sigma)
 	{
 #if 1
-		AES mAesHasher(OneBlock);
-		AES mAesRfunction(ZeroBlock);
 		std::vector<block> functionR(xInputs.size());
 		std::vector<u64> hashes1(xInputs.size());
 		std::vector<u64> hashes2(xInputs.size());
@@ -543,17 +531,17 @@ namespace osuCrypto {
 		std::cout << sigma << " sigma " << numBins << " numBins\n";
 
 		
+		std::vector<block> ciphers(xInputs.size());
+		mAesFixedKey.ecbEncBlocks(xInputs.data(), xInputs.size(), ciphers.data());
+		mAesFixedKey.ecbEncBlocks(xInputs.data(), xInputs.size(), functionR.data()); // use diff key for R
 
 
-		for (int i = 0; i < xInputs.size(); i++)
-			functionR[i] = mAesRfunction.ecbEncBlock(xInputs[i]);
 
 
 		for (int idxItem = 0; idxItem < xInputs.size(); idxItem++)
 		{
-			block cipher = mAesHasher.ecbEncBlock(xInputs[idxItem]);
-			u64 hh1 = _mm_extract_epi64(cipher, 0);
-			u64 hh2 = _mm_extract_epi64(cipher, 1);
+			u64 hh1 = _mm_extract_epi64(ciphers[idxItem], 0);
+			u64 hh2 = _mm_extract_epi64(ciphers[idxItem], 1);
 
 			hashes1[idxItem] = hh1 % numBins; //1st 64 bits for finding bin location
 			hashes2[idxItem] = hh2 % numBins; //2nd 64 bits for finding alter bin location
