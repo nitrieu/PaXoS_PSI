@@ -13,11 +13,8 @@ namespace osuCrypto
 		mNumHashs = numHashs;
 		mNumBins = numBins;
 		mSigma = sigma;
-		functionR.resize(inputSize);
-		
-
-
 	}
+
 	void MyVisitor::buidingGraph(span<block> inputs)
 	{
 		PRNG prng(ZeroBlock);
@@ -25,8 +22,9 @@ namespace osuCrypto
 	
 		hashes1.resize(inputs.size());
 		hashes2.resize(inputs.size());
-		strHashesIncr.resize(inputs.size());
-
+		//strHashesIncr.resize(inputs.size());
+		
+		std::map<string, int> groupHash; //TODO: edgeId mapping // std::map<EdgeID, int> mEdgeIdxMap2;
 		for (int idxItem = 0; idxItem < inputs.size(); idxItem++)
 		{
 			block cipher = mAesHasher.ecbEncBlock(inputs[idxItem]);
@@ -38,31 +36,36 @@ namespace osuCrypto
 
 			//std::cout << "hashes: " << hashes1[idxItem] << " === " << hashes2[idxItem] << "  == " << mNumBins << std::endl;
 
-			strHashesIncr[idxItem] = concateIntsIncr(hashes1[idxItem] , hashes2[idxItem] , mNumBins); //h1||h2
+			auto key = concateIntsIncr(hashes1[idxItem] , hashes2[idxItem] , mNumBins); //h1||h2
 
-			auto  p = mEdgeIdxMap.find(strHashesIncr[idxItem]);
+			auto  p = groupHash.find(key);
 
-			if (p == mEdgeIdxMap.end())
+			if (p == groupHash.end())
 			{
-				mEdgeIdxMap.emplace(pair<string, int>(strHashesIncr[idxItem], idxItem));
-				//std::cout << "mEdgeIdxMap: " << strHashesIncr[idxItem] << " === " << idxItem << std::endl;
+				groupHash.emplace(pair<string, int>(key, idxItem));
+				//std::cout << "groupHash: " << strHashesIncr[idxItem] << " === " << idxItem << std::endl;
 			}
 			else
 			{
-				mStrBadItems.insert(strHashesIncr[idxItem]);
-				mIdxBadItems.insert(idxItem); // for test
-				//std::cout << "mIdxBadItems============ " << idxItem << std::endl;
+				//mStrBadItems.insert(strHashesIncr[idxItem]);
+				//mIdxBadItems.insert(idxItem); // for test
+				mBadEdges.insert({ hashes1[idxItem],hashes2[idxItem] });
+				std::cout << "mIdxBadItems============ " << idxItem << std::endl;
 
 			}
 		}
 
-		ccGraph g(mEdgeIdxMap.size()); //init vertext 0,,m
+		ccGraph g(groupHash.size()); //init vertext 0,,m
 
-		for (auto it = mEdgeIdxMap.begin(); it != mEdgeIdxMap.end(); ++it)
+		for (auto it = groupHash.begin(); it != groupHash.end(); ++it)
 		{
 			u64 idxItem = it->second;
-			boost::add_edge(hashes1[idxItem], hashes2[idxItem], g);
+			auto e = boost::add_edge(hashes1[idxItem], hashes2[idxItem], g);
+			mEdgeIdxMap_new.insert(pair<set<u64>, int>({ hashes1[idxItem],hashes2[idxItem] }, idxItem));
+			//std::cout << e.first << "  " << idxItem <<"\n";
 		}
+		//std::cout << mBadEdges.size() << " mBadEdgesmBadEdges.size()\t";
+
 
 		mCuckooGraph = g;
 	}

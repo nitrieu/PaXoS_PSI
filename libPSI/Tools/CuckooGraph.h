@@ -92,6 +92,7 @@ namespace osuCrypto
 	}
 
 
+
 	class MyVisitor : public boost::default_dfs_visitor
 	{
 	private:
@@ -99,32 +100,31 @@ namespace osuCrypto
 		boost::shared_ptr< std::vector<EdgeID>> mDfs_component;
 		boost::shared_ptr<std::vector<std::vector<EdgeID>>> mDfs_circles;
 		boost::shared_ptr<std::set<EdgeID>> mDfs_back_edges;
+		//boost::shared_ptr<std::set<std::set<u64>>> mBadEdges;
 
 	public:
 		MyVisitor() : mDfs_visitor(new std::vector<EdgeID>())
 			, mDfs_component(new std::vector<EdgeID>())
-			, mDfs_circles(new std::vector<std::vector<EdgeID>>)
-			, mDfs_back_edges(new std::set<EdgeID>()) {}
+			, mDfs_circles(new std::vector<std::vector<EdgeID>>())
+			, mDfs_back_edges(new std::set<EdgeID>())
+			//, mBadEdges(new std::set<std::set<u64>>())
+		{}
 
 		
 		AES mAesHasher;
 		ccGraph mCuckooGraph;
-		std::map<string, int> mEdgeIdxMap; //TODO: edgeId mapping // std::map<EdgeID, int> mEdgeIdxMap2;
+		
 		int mInputSize, mNumHashs, mNumBins, mSigma;
 		std::vector<u64> hashes1;
 		std::vector<u64> hashes2;
-		std::vector<string> strHashesIncr;
-		std::set<string> mStrBadItems;
-		std::set<int> mIdxBadItems; //for test
-		std::vector<block> functionR;
-		/*std::vector<block> R;
-		std::vector<block> L;
-*/
+		std::set<std::set<u64>> mBadEdges;
+		std::map<std::set<u64>, int> mEdgeIdxMap_new; //TODO: edgeId mapping // std::map<EdgeID, int> mEdgeIdxMap2;
+
 
 
 		void init(u64 inputSize, u64 numHashs, u64 numBins, u64 sigma);
 		void buidingGraph(span<block> items);
-
+#if 0
 		/*void initialize_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
 		std::cout << "initialize_vertex: " << s<< std::endl;
 		}
@@ -142,11 +142,11 @@ namespace osuCrypto
 		/*void examine_edge(const Graph::edge_descriptor &e, const Graph &g) const {
 		std::cout << "Examine edge: " << e<< std::endl;
 		}*/
+#endif
 		
 		void tree_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
-		
-			auto strEdge=Edge2StringIncr(e, mNumBins);
-			if (mStrBadItems.find(strEdge) != mStrBadItems.end())  //bad item
+
+			if (mBadEdges.find({ e.m_source,e.m_target }) != mBadEdges.end())  //bad item
 			{
 				//std::cout << "back_edge back_edge: " << e << std::endl;
 				mDfs_back_edges->insert(e);
@@ -194,32 +194,33 @@ namespace osuCrypto
 		}
 
 
-		void finish_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
-			//std::cout << "finish_vertex: " << s << std::endl;
+		//void finish_vertex(const ccGraph::vertex_descriptor& s, const ccGraph& g) const {
+		//	//std::cout << "finish_vertex: " << s << std::endl;
 
-			//if (s== start_Vertex)
-			//{
-			//	std::cout << "finish_vertex finish_vertex: " << s << std::endl;
-			//	std::cout << "mDfs_component->size(): " << mDfs_component->size() << std::endl;
+		//	//if (s== start_Vertex)
+		//	//{
+		//	//	std::cout << "finish_vertex finish_vertex: " << s << std::endl;
+		//	//	std::cout << "mDfs_component->size(): " << mDfs_component->size() << std::endl;
 
-			//	if (mDfs_component->size() > 0) //no circle
-			//	{
-			//		mDfs_non_connected_components->push_back(*mDfs_component); // 
-			//		mDfs_component->clear(); //for next circle
-			//	//	isConnectedComponent = false;
-			//	}
+		//	//	if (mDfs_component->size() > 0) //no circle
+		//	//	{
+		//	//		mDfs_non_connected_components->push_back(*mDfs_component); // 
+		//	//		mDfs_component->clear(); //for next circle
+		//	//	//	isConnectedComponent = false;
+		//	//	}
 
-			//	if (isConnectedComponent)
-			//	{
-			//		//if(mDfs_component->size() > 0))
-			//		mDfs_connected_components->push_back(*mDfs_circles); // 
-			//		mDfs_component->clear(); //for next circle
-			//		mDfs_circles->clear(); //for next circle
-			//		isConnectedComponent = false;
-			//	}
-			//}
-		}
+		//	//	if (isConnectedComponent)
+		//	//	{
+		//	//		//if(mDfs_component->size() > 0))
+		//	//		mDfs_connected_components->push_back(*mDfs_circles); // 
+		//	//		mDfs_component->clear(); //for next circle
+		//	//		mDfs_circles->clear(); //for next circle
+		//	//		isConnectedComponent = false;
+		//	//	}
+		//	//}
+		//}
 
+		
 		std::vector<std::vector<EdgeID>>& GetDfsCircles() const { return *mDfs_circles; }
 		std::set<EdgeID>& GetDfsBackEdge() const { return *mDfs_back_edges; }
 		std::vector<EdgeID>& GetDfsVisitor() const { return *mDfs_visitor; }

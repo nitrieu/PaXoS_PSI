@@ -254,6 +254,15 @@ namespace osuCrypto {
 	{
 		std::vector<std::array<block, prty2SuperBlkSize>> R(sigma);
 		tblCuckoo.resize(numBin);
+		std::vector<block> functionR(xInputs.size());
+
+		//================Create linear equation
+		AES mAesRfunction(ZeroBlock);
+		for (int i = 0; i < xInputs.size(); i++)
+		{
+			functionR[i] = mAesRfunction.ecbEncBlock(xInputs[i]);
+		}
+
 		
 		for (int j = 0; j < prty2SuperBlkSize; j++)
 		{
@@ -295,31 +304,23 @@ namespace osuCrypto {
 				for (int k = 0; k < dfs_circles[i].size() - 1; ++k)
 				{
 					std::cout << "tree_edge: " << dfs_circles[i][k] << " == ";
-					auto key = Edge2StringIncr(dfs_circles[i][k], graph.mNumBins);
-					std::cout << graph.mEdgeIdxMap[key] << '\n';
-
+					std::cout << graph.mEdgeIdxMap_new.at({ dfs_circles[i][k].m_source,dfs_circles[i][k].m_target }) << '\n';
 				}
 			}
-			std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " == ";
-			auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
-			std::cout << graph.mEdgeIdxMap[key] << "\n===\n\n";
+			auto k = dfs_circles[i].size() - 1;
+			std::cout << "back_edge: " << dfs_circles[i][k] << " == ";
+			std::cout << graph.mEdgeIdxMap_new.at({ dfs_circles[i][k].m_source,dfs_circles[i][k].m_target }) << "\n===\n\n";
 		}
 
 
 		for (auto it = dfs_visitor.begin(); it != dfs_visitor.end(); ++it)
 		{
 			std::cout << "tree_edge: " << *it << " == ";
-			auto key = Edge2StringIncr(*it, graph.mNumBins);
-			std::cout << graph.mEdgeIdxMap[key] << "\n";
+			std::cout << graph.mEdgeIdxMap_new.at({it->m_source,it->m_target}) << "\n";
 
 		}
 
-		//================Create linear equation
-		AES mAesRfunction(ZeroBlock);
-		for (int i = 0; i < xInputs.size(); i++)
-		{
-			graph.functionR[i] = mAesRfunction.ecbEncBlock(xInputs[i]);
-		}
+		
 
 		std::vector < std::vector<bool>> GaussMatrix, copy_GaussMatrix;
 		std::vector<std::array<block, prty2SuperBlkSize>> assocated_values, copy_assocated_values; //for test
@@ -336,9 +337,12 @@ namespace osuCrypto {
 			
 			for (int j = 0; j < dfs_circles[i].size(); ++j) { // each circle
 
-				auto keyEgdeMapping = Edge2StringIncr(dfs_circles[i][j], graph.mNumBins);
-				auto idx_item_in_circle = graph.mEdgeIdxMap[keyEgdeMapping];
-				equation = equation ^ graph.functionR[idx_item_in_circle];
+				//auto keyEgdeMapping = 
+				(dfs_circles[i][j], graph.mNumBins);
+				//auto idx_item_in_circle = graph.mEdgeIdxMap[keyEgdeMapping];
+				auto idx_item_in_circle = graph.mEdgeIdxMap_new.at({ dfs_circles[i][j].m_source,dfs_circles[i][j].m_target});
+
+				equation = equation ^ functionR[idx_item_in_circle];
 				
 				for (int k = 0; k < prty2SuperBlkSize; ++k) 
 					assocated_value[k] = assocated_value[k] ^ yInputs[idx_item_in_circle][k];
@@ -391,13 +395,14 @@ namespace osuCrypto {
 
 
 		//================Fill D
+		std::cout << graph.mEdgeIdxMap_new.size() << " mEdgeIdxMap_new.size().size()============\n";
+
 
 		bool isRoot;
 		for (auto it = dfs_visitor.begin(); it != dfs_visitor.end(); ++it)
 		{
 			auto edge = *it;
-			auto keyEgdeMapping = Edge2StringIncr(edge, graph.mNumBins);
-			auto idxItem = graph.mEdgeIdxMap[keyEgdeMapping];
+			auto idxItem = graph.mEdgeIdxMap_new.at({ edge.m_source,edge.m_target });
 
 				bool isRoot = eq(tblCuckoo[edge.m_source][0], AllOneBlock);
 				if (isRoot) //root
@@ -414,7 +419,7 @@ namespace osuCrypto {
 					for (int k = 0; k < prty2SuperBlkSize; k++)
 						tblCuckoo[edge.m_target][k] = tblCuckoo[edge.m_source][k] ^ yInputs[idxItem][k];
 					
-					block valueR = graph.functionR[idxItem];
+					block valueR = functionR[idxItem];
 
 					BitVector coeff((u8*)& valueR, graph.mSigma);
 					//std::cout << " \n " << coeff << " coeff  == " << idxItem << " idx ";
@@ -446,8 +451,7 @@ namespace osuCrypto {
 			for (int k = 0; k < prty2SuperBlkSize; k++)
 				x[k] = tblCuckoo[h1][k] ^ tblCuckoo[h2][k];
 
-			block valueR = graph.functionR[i];
-			BitVector coeff((u8*)& valueR, graph.mSigma);
+			BitVector coeff((u8*)& functionR[i], graph.mSigma);
 			//std::cout << coeff << "\n";
 			for (int b = 0; b < coeff.size(); b++)
 			{
@@ -505,8 +509,7 @@ namespace osuCrypto {
 			for (int k = 0; k < prty2SuperBlkSize; k++)
 				outputs[i][k] = tblCuckoo[h1][k] ^ tblCuckoo[h2][k];
 
-			block valueR = functionR[i];
-			BitVector coeff((u8*)& valueR, sigma);
+			BitVector coeff((u8*)& functionR[i], sigma);
 			//std::cout << coeff << "\n";
 			for (int b = 0; b < coeff.size(); b++)
 			{
@@ -572,8 +575,7 @@ namespace osuCrypto {
 				cVal[j] = lVal_h1[j] ^ lVal_h2[j];
 			}
 
-			block valueR = functionR[i];
-			BitVector coeff((u8*)& valueR, sigma);
+			BitVector coeff((u8*)& functionR[i], sigma);
 			//std::cout << sigma << "  sigma\n";
 			for (int b = 0; b < sigma; b++)
 			{

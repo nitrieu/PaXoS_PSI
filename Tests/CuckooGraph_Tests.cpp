@@ -122,21 +122,41 @@ namespace tests_libOTe
 	}
 
 	void solveEquation_Test() {
-		std::map<EdgeID, int> mEdgeIdxMap;
+		std::map<std::set<int>, int> mEdgeIdxMap;
 		ccGraph g(10); //init vertext 0,,m
 
 		auto e1 = boost::add_edge(0, 1, g);
-		mEdgeIdxMap.insert(pair<EdgeID, int>(e1.first, 1));
+		mEdgeIdxMap.insert(pair<std::set<int>, int>({ 0,1 }, 3));
 
 		auto e2 = boost::add_edge(1, 2, g);
-		mEdgeIdxMap.insert(pair<EdgeID, int>(e2.first, 3));
+		mEdgeIdxMap.insert(pair<std::set<int>, int>({ 1,2 }, 3));
+
 
 		auto e3 = boost::add_edge(2, 0, g);  //triagnle 012  //3
-		mEdgeIdxMap.insert(pair<EdgeID, int>(e3.first, 3));
+		mEdgeIdxMap.insert(pair<std::set<int>, int>({ 2,0 }, 3));
+
+		
+		//mEdgeIdxMap.insert(pair<EdgeID, int>(e2.first, 3));
+
+		//mEdgeIdxMap.insert(pair<pair<int,int>, int>(make_pair(2,0), 3));
+
+
+		ccGraph g1(10); //init vertext 0,,m
+		auto d3 = boost::add_edge(2, 3, g1);  //triagnle 012  //3
+
+
+		auto  p = mEdgeIdxMap.find({ 0,5 });
+
+		if (p ==mEdgeIdxMap.end())
+		{
+			std::cout << "not found \n";
+		}
+		else
+			std::cout << "found\n";
 
 
 		//	g.out_edge_list
-		std::cout << mEdgeIdxMap[e3.first] << "\n";
+		//std::cout << mEdgeIdxMap[e3.first] << "\n";
 
 	}
 
@@ -179,13 +199,13 @@ namespace tests_libOTe
 				{
 					std::cout << "tree_edge: " << dfs_circles[i][k] << " == ";
 					auto key = Edge2StringIncr(dfs_circles[i][k], graph.mNumBins);
-					std::cout << graph.mEdgeIdxMap[key] << '\n';
+				//	std::cout << graph.mEdgeIdxMap[key] << '\n';
 
 				}
 			}
 			std::cout << "back_edge: " << dfs_circles[i][dfs_circles[i].size() - 1] << " == ";
 			auto key = Edge2StringIncr(dfs_circles[i][dfs_circles[i].size() - 1], graph.mNumBins);
-			std::cout << graph.mEdgeIdxMap[key] << "\n===\n\n";
+			//std::cout << graph.mEdgeIdxMap[key] << "\n===\n\n";
 		}
 
 
@@ -193,7 +213,7 @@ namespace tests_libOTe
 		{
 			std::cout << "tree_edge: " << *it << " == ";
 			auto key = Edge2StringIncr(*it, graph.mNumBins);
-			std::cout << graph.mEdgeIdxMap[key] << "\n";
+		//	std::cout << graph.mEdgeIdxMap[key] << "\n";
 
 		}
 		/*	for (int i = 0; i < dfs_connected_component.size(); ++i)
