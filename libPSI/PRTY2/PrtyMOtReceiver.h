@@ -60,6 +60,10 @@ namespace osuCrypto
 			void* dest,
 			u64 destSize);
 
+		void otCorrection(
+			u64 otIdx,
+			const void* inputword) ;
+
         using NcoOtExtReceiver::encode;
         void encode(
             u64 otIdx,

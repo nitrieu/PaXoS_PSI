@@ -750,6 +750,7 @@ namespace tests_libOTe
 			auto curStepSize = std::min<u64>(stepSize, numOTs - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
+				recv.otCorrection(i + k, &inputs[k + i]);
 				recv.encode(i + k, &inputs[k + i], (u8*)& encoding1[k + i], sizeof(block));
 			}
 			recv.sendCorrection(recvChl, curStepSize);
@@ -857,11 +858,6 @@ namespace tests_libOTe
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
 					sender.otCorrection(i + k);
-					//std::cout << i + k << ": " << sender.mT[i + k][0] << "  sender.mT[i + k][0] vs ";// << " vs " << prtyEncoding2[i] << "\n";
-					
-					// For OOS test only
-					sender.encode(i + k, &cuckooTables[k + i], (u8*)& oosEncoding2[i + k], sizeof(block));
-					//std::cout << sender.mT[i + k][0] << " \n";
 				}
 			}
 			});
@@ -873,9 +869,7 @@ namespace tests_libOTe
 			auto curStepSize = std::min<u64>(stepSize, numOTs - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				//std::cout << i + k << ": " << recv.mT0[i + k][0] <<"  recv.mT0[i + k][0] vs " ;// << " vs " << prtyEncoding2[i] << "\n";
-				recv.encode(i + k, &cuckooTables[k + i], (u8*)& oosEncoding1[k + i], sizeof(block));
-				//std::cout << recv.mT0[i + k][0] << " \n";
+				recv.otCorrection(i + k, &cuckooTables[k + i]);
 
 			}
 

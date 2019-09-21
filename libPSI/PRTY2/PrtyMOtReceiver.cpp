@@ -224,6 +224,68 @@ namespace osuCrypto
 #endif
 	}
 
+	void PrtyMOtReceiver::otCorrection(
+		u64 otIdx,
+		const void* input)
+	{
+#ifndef NDEBUG
+		//if (choice.size() != mCode.plaintextBlkSize())
+		//    throw std::invalid_argument("");
+		if (mInputByteCount == 0)
+			throw std::runtime_error("configure must be called first");
+
+		if (eq(mT0[otIdx][0], ZeroBlock))
+			throw std::runtime_error("uninitialized OT extension");
+
+		if (mEncodeFlags[otIdx])
+			throw std::runtime_error("encode can only be called once per otIdx");
+
+		mEncodeFlags[otIdx] = 1;
+#endif // !NDEBUG
+		block* t0Val = mT0.data() + mT0.stride() * otIdx;
+		block* t1Val = mT1.data() + mT0.stride() * otIdx;
+		block* wVal = mW.data() + mW.stride() * otIdx;
+		memcpy(wVal, input, mInputByteCount);
+
+		// use this for two thing, to store the code word and
+		// to store the zero message from base OT matrix transposed.
+		std::array<block, 10> codeword = { ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock };
+		mCode.encode((u8*)wVal, (u8*)codeword.data());
+
+		//std::cout << "encode[" << otIdx << "] = " << BitVector((u8*)wVal, 76).hex() << " ->  " << codeword[0] << std::endl;
+		// encode the correction value as u = T0 + T1 + c(w), there c(w) is a codeword.
+
+		if (mT0.stride() == 4)
+		{
+
+			// this code here is optimized for codewords of size ~ 128 * 4.
+
+			t1Val[0] = t1Val[0] ^ codeword[0];
+			t1Val[1] = t1Val[1] ^ codeword[1];
+			t1Val[2] = t1Val[2] ^ codeword[2];
+			t1Val[3] = t1Val[3] ^ codeword[3];
+
+			t1Val[0] = t1Val[0] ^ t0Val[0];
+			t1Val[1] = t1Val[1] ^ t0Val[1];
+			t1Val[2] = t1Val[2] ^ t0Val[2];
+			t1Val[3] = t1Val[3] ^ t0Val[3];
+		}
+		else
+		{
+
+			for (u64 i = 0; i < mT0.stride(); ++i)
+			{
+				// reuse mT1 as the place we store the correlated value.
+				// this will later get sent to the sender.
+				t1Val[i]
+					= codeword[i]
+					^ t0Val[i]
+					^ t1Val[i];
+			}
+
+	}
+
+	}
 
     void PrtyMOtReceiver::encode(
         u64 otIdx,
@@ -240,101 +302,30 @@ namespace osuCrypto
         if (eq(mT0[otIdx][0], ZeroBlock))
             throw std::runtime_error("uninitialized OT extension");
 
-        if (mEncodeFlags[otIdx])
-            throw std::runtime_error("encode can only be called once per otIdx");
-
-        mEncodeFlags[otIdx] = 1;
 #endif // !NDEBUG
         block* t0Val = mT0.data() + mT0.stride() * otIdx;
-        block* t1Val = mT1.data() + mT0.stride() * otIdx;
-        block* wVal = mW.data() + mW.stride() * otIdx;
-        memcpy(wVal, input, mInputByteCount);
-
-        // use this for two thing, to store the code word and
-        // to store the zero message from base OT matrix transposed.
-        std::array<block, 10> codeword = { ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock, ZeroBlock };
-        mCode.encode((u8*)wVal, (u8*)codeword.data());
-
-        //std::cout << "encode[" << otIdx << "] = " << BitVector((u8*)wVal, 76).hex() << " ->  " << codeword[0] << std::endl;
-
-
-
-
-        // encode the correction value as u = T0 + T1 + c(w), there c(w) is a codeword.
-
-        if (mT0.stride() == 4)
-        {
-
-            // this code here is optimized for codewords of size ~ 128 * 4.
-
-            t1Val[0] = t1Val[0] ^ codeword[0];
-            t1Val[1] = t1Val[1] ^ codeword[1];
-            t1Val[2] = t1Val[2] ^ codeword[2];
-            t1Val[3] = t1Val[3] ^ codeword[3];
-
-            t1Val[0] = t1Val[0] ^ t0Val[0];
-            t1Val[1] = t1Val[1] ^ t0Val[1];
-            t1Val[2] = t1Val[2] ^ t0Val[2];
-            t1Val[3] = t1Val[3] ^ t0Val[3];
+     
 
 #ifdef PRTY_SHA_HASH
-            RandomOracle  sha1(destSize);
-            // now hash it to remove the correlation.
-            sha1.Update((u8*)t0Val, mT0.stride() * sizeof(block));
-            sha1.Final((u8*)dest);
+		RandomOracle  sha1;
+		u8 hashBuff[RandomOracle::HashSize];
+		// now hash it to remove the correlation.
+		sha1.Update((u8*)t0Val, mT0.stride() * sizeof(block));
+		sha1.Final(hashBuff);
+		memcpy(dest, hashBuff, std::min<u64>(RandomOracle::HashSize, destSize));
+		//val = toBlock(hashBuff);
 #else
-            //H(x) = AES_f(H'(x)) + H'(x), where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
-            mAesFixedKey.ecbEncFourBlocks(t0Val, codeword.data());
+		//H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
+		mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), codeword.data());
 
-            codeword[0] = codeword[0] ^ t0Val[0];
-            codeword[1] = codeword[1] ^ t0Val[1];
-            codeword[2] = codeword[2] ^ t0Val[2];
-            codeword[3] = codeword[3] ^ t0Val[3];
+		val = ZeroBlock;
+		for (u64 i = 0; i < mT0.stride(); ++i)
+			val = val ^ codeword[i] ^ t0Val[i];
 
-            val = codeword[0] ^ codeword[1];
-            codeword[2] = codeword[2] ^ codeword[3];
 
-            val = val ^ codeword[2];
-
-            mAesFixedKey.ecbEncBlock(val, codeword[0]);
-            val = val ^ codeword[0];
+		mAesFixedKey.ecbEncBlock(val, codeword[0]);
+		val = val ^ codeword[0];
 #endif
-
-        }
-        else
-        {
-
-            for (u64 i = 0; i < mT0.stride(); ++i)
-            {
-                // reuse mT1 as the place we store the correlated value.
-                // this will later get sent to the sender.
-                t1Val[i]
-                    = codeword[i]
-                    ^ t0Val[i]
-                    ^ t1Val[i];
-            }
-
-#ifdef PRTY_SHA_HASH
-            RandomOracle  sha1;
-            u8 hashBuff[RandomOracle::HashSize];
-            // now hash it to remove the correlation.
-            sha1.Update((u8*)t0Val, mT0.stride() * sizeof(block));
-            sha1.Final(hashBuff);
-            memcpy(dest, hashBuff, std::min<u64>(RandomOracle::HashSize, destSize));
-            //val = toBlock(hashBuff);
-#else
-            //H(x) = AES_f(H'(x)) + H'(x),     where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
-            mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), codeword.data());
-
-            val = ZeroBlock;
-            for (u64 i = 0; i < mT0.stride(); ++i)
-                val = val ^ codeword[i] ^ t0Val[i];
-
-
-            mAesFixedKey.ecbEncBlock(val, codeword[0]);
-            val = val ^ codeword[0];
-#endif
-        }
 
     }
 
