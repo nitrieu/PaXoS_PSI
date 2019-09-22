@@ -398,7 +398,7 @@ namespace osuCrypto {
 
 
 		//================Fill D
-		std::cout << graph.mEdgeIdxMap_new.size() << " mEdgeIdxMap_new.size().size()============\n";
+		//std::cout << graph.mEdgeIdxMap_new.size() << " mEdgeIdxMap_new.size().size()============\n";
 
 
 		bool isRoot;
