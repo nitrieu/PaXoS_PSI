@@ -110,7 +110,11 @@ namespace tests_libOTe
 			bitVector_Test();
 		}
 
-
+		TEST_METHOD(Prty2_Real_PSI_TestVS)
+		{
+			InitDebugPrinting();
+			Prty2_Real_PSI_impl();
+		}
 
 	};
 }

@@ -12,6 +12,6 @@ namespace tests_libOTe
 	void PrtyMOt_Test_Impl();
 	void PrtyLinearCode_Test_Impl();
 	void Prty2Psi_Test_Impl();
-
+	void Prty2_Real_PSI_impl();
 
 }

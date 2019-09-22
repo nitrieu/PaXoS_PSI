@@ -9,7 +9,7 @@
 //#include <mutex>
 #include <atomic>
 
-using namespace boost;
+//using namespace boost;
 using namespace std;
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/connected_components.hpp>
@@ -287,7 +287,7 @@ namespace osuCrypto {
 		std::cout << "\ndfs_back_edge.size(): " << dfs_back_edge.size();
 		std::cout << "\ndfs_visitor.size(): " << dfs_visitor.size();
 
-
+#ifdef DEBUG_PRTY
 		std::cout << "\n=============\n";
 		for (int i = 0; i < dfs_circles.size(); ++i)
 		{
@@ -313,8 +313,7 @@ namespace osuCrypto {
 			std::cout << graph.mEdgeIdxMap_new.at({it->m_source,it->m_target}) << "\n";
 
 		}
-
-		
+#endif // DEBUG_PRTY
 
 		std::vector < std::vector<bool>> GaussMatrix, copy_GaussMatrix;
 		std::vector<std::array<block, prty2SuperBlkSize>> assocated_values, copy_assocated_values; //for test
@@ -349,19 +348,24 @@ namespace osuCrypto {
 			assocated_values.push_back(assocated_value);
 
 		}
+
+#ifdef DEBUG_PRTY
 		copy_GaussMatrix = GaussMatrix;//for test
 		copy_assocated_values = assocated_values;
+#endif // DEBUG_PRTY
 
 		//Solution 
 
 		if (GaussMatrix.size() > 0)
 			R = gaussianElimination(GaussMatrix, assocated_values);
 
+#ifdef DEBUG_PRTY
 		for (size_t i = 0; i < copy_assocated_values.size(); i++)
 		{
 			std::cout << copy_assocated_values[i][0] << " ==copy_assocated_values== " << assocated_values[i][0] << "\n";
 
 		}
+
 
 		for (int i = 0; i < copy_GaussMatrix.size(); i++)
 		{
@@ -385,7 +389,7 @@ namespace osuCrypto {
 				}
 
 		}
-
+#endif // DEBUG_PRTY
 
 
 		//================Fill D
@@ -404,7 +408,7 @@ namespace osuCrypto {
 					for (int k = 0; k < prty2SuperBlkSize; k++)
 						tblCuckoo[edge.m_source][k] = ZeroBlock;// prng.get<block>();
 					
-					std::cout << idxItem << " , ";
+					//std::cout << idxItem << " , ";
 
 				}
 				//compute h2

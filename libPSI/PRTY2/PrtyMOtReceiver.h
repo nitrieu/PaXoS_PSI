@@ -80,5 +80,5 @@ namespace osuCrypto
         std::unique_ptr<NcoOtExtReceiver> split() override;
 
     };
-
+	
 }

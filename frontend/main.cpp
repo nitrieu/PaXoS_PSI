@@ -69,6 +69,8 @@ using namespace osuCrypto;
 
 #include "PRTY/PrtySender.h"
 #include "PRTY/PrtyReceiver.h"
+#include "PRTY2/PrtyMPsiSender.h"
+#include "PRTY2/PrtyMPsiReceiver.h"
 #include "Tools/BalancedIndex.h"
 #include "Tools/CuckooHasher.h"
 
@@ -120,6 +122,7 @@ void usage(const char* argv0)
 
 }
 
+#ifdef PRTY_C19
 
 void Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
 {
@@ -769,8 +772,185 @@ void Prty_PSI_impl()
 
 }
 
+#endif
+
+
+#define PRTY2
+
+#ifdef PRTY2
+
+void Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
+{
+	u64 psiSecParam = 40;
+
+	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+
+	// set up networking
+	std::string name = "n";
+	IOService ios;
+	Endpoint ep1(ios, ipAddr_Port, EpMode::Server, name);
+
+	std::vector<Channel> sendChls(numThreads);
+	for (u64 i = 0; i < numThreads; ++i)
+		sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+
+	PrtyMPsiSender sender;
+	gTimer.reset();
+	gTimer.setTimePoint("s_start");
+
+	sender.init(inputs.size(), theirSetSize, 40, prng0, sendChls);
+	gTimer.setTimePoint("s_offline");
+	
+	sender.output(inputs, sendChls);
+	
+
+	gTimer.setTimePoint("s_end");
+	std::cout << gTimer << std::endl;
+
+	for (u64 i = 0; i < numThreads; ++i)
+		sendChls[i].close();
+
+	ep1.stop();	ios.stop();
+}
+
+
+void Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
+{
+	u64 psiSecParam = 40;
+
+	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
+
+	// set up networking
+	std::string name = "n";
+	IOService ios;
+	Endpoint ep0(ios, ipAddr_Port, EpMode::Client, name);
+
+	std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+	for (u64 i = 0; i < numThreads; ++i)
+		recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+
+	PrtyMPsiSender recv;
+	gTimer.reset();
+	gTimer.setTimePoint("r_start");
+
+	recv.init(inputs.size(), theirSetSize, 40, prng1, recvChls); //offline
+
+	gTimer.setTimePoint("r_offline");
+
+	
+	recv.output(inputs, recvChls);
+	
+
+
+	gTimer.setTimePoint("r_end");
+
+	std::cout << gTimer << std::endl;
+
+	//std::cout << "recv.mIntersection  : " << recv.mIntersection.size() << std::endl;
+	//std::cout << "expectedIntersection: " << expectedIntersection << std::endl;
+	//for (u64 i = 0; i < recv.mIntersection.size(); ++i)//thrds.size()
+	//{
+	//	/*std::cout << "#id: " << recv.mIntersection[i] <<
+	//		"\t" << inputs[recv.mIntersection[i]] << std::endl;*/
+	//}
+
+	u64 dataSent = 0, dataRecv(0);
+	for (u64 g = 0; g < recvChls.size(); ++g)
+	{
+		dataSent += recvChls[g].getTotalDataSent();
+		dataRecv += recvChls[g].getTotalDataRecv();
+		recvChls[g].resetStats();
+	}
+
+	std::cout << "      Total Comm = " << string_format("%5.2f", (dataRecv + dataSent) / std::pow(2.0, 20)) << " MB\n";
+
+	for (u64 i = 0; i < numThreads; ++i)
+		recvChls[i].close();
+
+	ep0.stop(); ios.stop();
+
+}
+
+
+void Prty2_Psi_demo()
+{
+	setThreadName("Sender");
+	u64 setSenderSize = 1 << 5, setRecvSize = 1 << 5, psiSecParam = 40, numThreads(1);
+
+	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
+
+
+	std::vector<block> sendSet(setSenderSize), recvSet(setRecvSize);
+	for (u64 i = 0; i < setSenderSize; ++i)
+		sendSet[i] = prng0.get<block>();
+
+	for (u64 i = 0; i < setRecvSize; ++i)
+		recvSet[i] = prng0.get<block>();
+
+
+	for (u64 i = 0; i < 10; ++i)
+	{
+		sendSet[i] = recvSet[i];
+		//std::cout << "intersection: " <<sendSet[i] << "\n";
+	}
+
+	// set up networking
+	std::string name = "n";
+	IOService ios;
+	Endpoint ep0(ios, "localhost", 1212, EpMode::Client, name);
+	Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
+
+	std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+	for (u64 i = 0; i < numThreads; ++i)
+	{
+		sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+		recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+	}
+
+	PrtyMPsiSender sender;
+	PrtyMPsiReceiver recv;
+
+	auto thrd = std::thread([&]() {
+		recv.init(recvSet.size(), sendSet.size(), 40, prng1, recvChls, true);
+		recv.output(recvSet, recvChls);
+		});
+
+	sender.init(sendSet.size(), recvSet.size(), 40, prng0, sendChls, true);
+	sender.output(sendSet, sendChls);
+
+	thrd.join();
+
+
+
+	std::cout << "recv.mIntersection.size(): " << recv.mIntersection.size() << std::endl;
+	for (u64 i = 0; i < recv.mIntersection.size(); ++i)//thrds.size()
+	{
+		std::cout << "#id: " << recv.mIntersection[i] <<
+			"\t" << recvSet[recv.mIntersection[i]] << std::endl;
+	}
+
+
+	for (u64 i = 0; i < numThreads; ++i)
+
+	{
+		sendChls[i].close(); recvChls[i].close();
+	}
+
+	ep0.stop(); ep1.stop();	ios.stop();
+
+
+}
+
+
+
+#endif
+
 int main(int argc, char** argv)
 {
+	Prty2_Psi_demo();
+	return 0;
+
 	/*CuckooHasher_Test_Impl();
 	return 0;*/
 	//#####################ECHD##############

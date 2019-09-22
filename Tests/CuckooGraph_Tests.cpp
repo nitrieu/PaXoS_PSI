@@ -29,6 +29,8 @@
 
 #include "PRTY2/PrtyMOtReceiver.h"
 #include "PRTY2/PrtyMOtSender.h"
+#include "PRTY2/PrtyMPsiReceiver.h"
+#include "PRTY2/PrtyMPsiSender.h"
 #include "Tools/BalancedIndex.h"
 #include "Tools/SimpleIndex.h"
 #include "Tools/CuckooHasher.h"
@@ -939,6 +941,76 @@ namespace tests_libOTe
 
 	}
 
+
+	void Prty2_Real_PSI_impl()
+	{
+		setThreadName("Sender");
+		u64 setSenderSize = 1 << 5, setRecvSize = 1 << 5, psiSecParam = 40, numThreads(1);
+
+		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
+
+
+		std::vector<block> sendSet(setSenderSize), recvSet(setRecvSize);
+		for (u64 i = 0; i < setSenderSize; ++i)
+			sendSet[i] = prng0.get<block>();
+
+		for (u64 i = 0; i < setRecvSize; ++i)
+			recvSet[i] = prng0.get<block>();
+
+
+		for (u64 i = 0; i < 10; ++i)
+		{
+			sendSet[i] = recvSet[i];
+			//std::cout << "intersection: " <<sendSet[i] << "\n";
+		}
+
+		// set up networking
+		std::string name = "n";
+		IOService ios;
+		Endpoint ep0(ios, "localhost", 1212, EpMode::Client, name);
+		Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
+
+		std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+		for (u64 i = 0; i < numThreads; ++i)
+		{
+			sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+			recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+		}
+
+		PrtyMPsiSender sender;
+		PrtyMPsiReceiver recv;
+
+		auto thrd = std::thread([&]() {
+			recv.init(recvSet.size(), sendSet.size(), 40, prng1, recvChls,true);
+			recv.output(recvSet, recvChls);
+			});
+
+		sender.init(sendSet.size(), recvSet.size(), 40, prng0, sendChls, true);
+		sender.output(sendSet, sendChls);
+
+		thrd.join();
+
+
+
+		std::cout << "recv.mIntersection.size(): " << recv.mIntersection.size() << std::endl;
+		for (u64 i = 0; i < recv.mIntersection.size(); ++i)//thrds.size()
+		{
+			std::cout << "#id: " << recv.mIntersection[i] <<
+				"\t" << recvSet[recv.mIntersection[i]] << std::endl;
+		}
+
+
+		for (u64 i = 0; i < numThreads; ++i)
+
+		{
+			sendChls[i].close(); recvChls[i].close();
+		}
+
+		ep0.stop(); ep1.stop();	ios.stop();
+
+
+	}
 
 
 }
