@@ -19,7 +19,7 @@ namespace osuCrypto
 {
 	static const u64 prty2SuperBlkSize(2);
 
-	static const u64 stepSize(1 << 2);
+	static const u64 stepSize(1 << 10);
 	static const u64 stepSizeMaskSent(1<<14);
 	static const u8 numSuperBlocks(4); //wide of T (or field size)
 	static const u8 first2Slices(2); //2*128 + (436-2*128)

@@ -281,10 +281,13 @@ namespace osuCrypto {
 
 		auto dfs_circles = graph.GetDfsCircles();
 		auto dfs_visitor = graph.GetDfsVisitor();
-		auto dfs_back_edge = graph.GetDfsBackEdge();
+		//auto dfs_back_edge = graph.GetDfsBackEdge();
+		
+		//gTimer.setTimePoint("r_Dfs");
+
 
 		std::cout << "\ndfs_circles.size(): " << dfs_circles.size();
-		std::cout << "\ndfs_back_edge.size(): " << dfs_back_edge.size();
+		//std::cout << "\ndfs_back_edge.size(): " << dfs_back_edge.size();
 		std::cout << "\ndfs_visitor.size(): " << dfs_visitor.size();
 
 #ifdef DEBUG_PRTY
@@ -358,6 +361,8 @@ namespace osuCrypto {
 
 		if (GaussMatrix.size() > 0)
 			R = gaussianElimination(GaussMatrix, assocated_values);
+
+		//gTimer.setTimePoint("r_GaussMatrix");
 
 #ifdef DEBUG_PRTY
 		for (size_t i = 0; i < copy_assocated_values.size(); i++)

@@ -26,7 +26,7 @@ namespace osuCrypto
      
 		
 		bool mHasBase;
-		BalancedIndex mBalance;
+		bool mIsMalicious;
 
 		u64 mMyInputSize, mTheirInputSize, mMaskLength, mPsiSecParam, mNumBin, mSigma, mNumOTs;
 		std::vector<block> mS;

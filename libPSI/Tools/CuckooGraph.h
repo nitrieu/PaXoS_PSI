@@ -164,6 +164,7 @@ namespace osuCrypto
 			// since the graph is undirected, if tree_edge is (0,1) then back_edge is (1,0)
 			//we want to remove this back_edge by remembering dfs_tree_edges, and check the condition in void back_edge
 
+#ifdef BAD_DFS
 		  if(std::find(mDfs_visitor->begin(), mDfs_visitor->end(), e) == mDfs_visitor->end() 
 			  && mDfs_back_edges->find(e) == mDfs_back_edges->end())
 			{
@@ -173,14 +174,20 @@ namespace osuCrypto
 				mDfs_circles->push_back(*mDfs_component); // add this circle to dfs_circles
 				mDfs_component->clear(); //for next circle
 			}
+#endif // BAD_DFS
 
 			//std::cout << "back_edge: " << e << std::endl;
 		}
 		void forward_or_cross_edge(const ccGraph::edge_descriptor& e, const ccGraph& g) const {
 			//std::cout << "forward_or_cross_edge: " << e << std::endl;
 			
+			// since the graph is undirected, if tree_edge is (0,1) then back_edge is (1,0)
+			// forward_or_cross_edge is "potential" back_edge
+
+#ifdef BAD_DFS
 			if (std::find(mDfs_visitor->begin(), mDfs_visitor->end(), e) == mDfs_visitor->end()
 				&& mDfs_back_edges->find(e) == mDfs_back_edges->end())
+#endif // BAD_DFS
 			{
 				//std::cout << "back_edge back_edge: " << e << std::endl;
 				mDfs_back_edges->insert(e);

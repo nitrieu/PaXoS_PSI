@@ -20,7 +20,8 @@ namespace osuCrypto {
 
 		u64 mMyInputSize, mTheirInputSize, mMaskLength, mPsiSecParam, mNumBin, mSigma, mNumOTs;
 		PrtyMOtSender mPrytOtSender; //
-		
+		bool mIsMalicious;
+
 		u64 mFieldSize;
 
 		PRNG mPrng;

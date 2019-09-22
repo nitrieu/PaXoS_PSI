@@ -17,7 +17,8 @@ namespace osuCrypto
 		mPsiSecParam = psiSecParam;
 		mMyInputSize = myInputSize;
 		mTheirInputSize = theirInputSize;
-		mMaskLength = 64 / 8;// (psiSecParam + log2(mTheirInputSize * mMyInputSize) + 7) / 8;
+		mMaskLength = (psiSecParam + log2(mTheirInputSize * mMyInputSize) + 7) / 8;
+		mIsMalicious = isMalicious;
 
 
 		mPrng.SetSeed(prng.get<block>());
@@ -95,8 +96,16 @@ namespace osuCrypto
 		for (auto& thrd : thrds)
 			thrd.join();
 
+		gTimer.setTimePoint("s_oos");
+
+		//TODO
+		/*if(mIsMalicious)
+			mPrytOtSender.check(chls[0], mPrng.get<block>());*/
+
 		//Decode(Q,inputs)
 		Cuckoo_decode(inputs, mPrytOtSender.mQx, mPrytOtSender.mT, mNumBin, mSigma); //geting Decode(Q,x)
+
+		gTimer.setTimePoint("s_Cuckoo_decode");
 
 			//======compute PSI
 		auto psi_routine = [&](u64 t)

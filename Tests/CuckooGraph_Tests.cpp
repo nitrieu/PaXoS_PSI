@@ -742,6 +742,9 @@ namespace tests_libOTe
 					sender.encode(i + k, &inputs[k + i], (u8*)& encoding2[k + i], sizeof(block));
 				}
 			}
+			
+			//sender.check(sendChl, toBlock(322334));
+
 			});
 
 		recv.init(numOTs, prng1, recvChl);
@@ -757,9 +760,25 @@ namespace tests_libOTe
 			}
 			recv.sendCorrection(recvChl, curStepSize);
 		}
+
+		//recv.check(recvChl, toBlock(322334));
+
 		thrd.join();
 
 
+
+		//auto v = std::async([&] {
+		//	recv.check(recvChl, toBlock(322334));
+		//	});
+
+		//try {
+		//	sender.check(sendChl, toBlock(324));
+		//}
+		//catch (...)
+		//{
+		//	//sendChl.mBase->mLog;
+		//}
+		//v.get();
 
 		// Get the random OT messages
 		for (u64 i = 0; i < numOTs; i ++)
