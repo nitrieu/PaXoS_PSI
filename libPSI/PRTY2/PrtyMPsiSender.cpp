@@ -27,7 +27,7 @@ namespace osuCrypto
 		else
 			mCuckooItemLength = 132;//getShCodewordSize(mTheirInputSize);
 
-		mNumBin = getBinSize(mTheirInputSize); //TODO: remove
+		mNumBin = floor(mTheirInputSize * getBinScaleSize(mTheirInputSize)); //TODO: remove
 		mSigma = getSigma(mTheirInputSize);
 
 		mNumOTs = mNumBin + mSigma;

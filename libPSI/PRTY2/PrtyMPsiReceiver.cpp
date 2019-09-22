@@ -31,8 +31,8 @@ namespace osuCrypto
 		else
 			mCuckooItemLength = 132;//getShCodewordSize(myInputSize);
 
-		mNumBin = getBinSize(mTheirInputSize); //TODO: remove
-		mSigma = getSigma(mTheirInputSize);
+		mNumBin = floor(mMyInputSize *getBinScaleSize(mTheirInputSize)); //TODO: remove
+		mSigma = getSigma(mMyInputSize);
 
 		mNumOTs = mNumBin + mSigma;
 		mPrytOtRecv.configure(isMalicious, psiSecParam, mCuckooItemLength);
@@ -278,6 +278,10 @@ namespace osuCrypto
 			thrd.join();
 
 		recvTimer.setTimePoint("r_done");
+
+		std::cout << "\n==============Detail==============" << std::endl;
+		std::cout << "\nmNumBin: " 
+			<< mNumBin << "\t " << "mSigma: "<< mSigma  << "\n";
 		std::cout << recvTimer << "\n";
 	}
 

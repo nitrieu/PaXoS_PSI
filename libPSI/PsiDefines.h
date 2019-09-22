@@ -82,10 +82,10 @@ namespace osuCrypto
 		return 444;
 	}
 
-	inline u64 getBinSize(u64 setSize)
+	inline double getBinScaleSize(u64 setSize)
 	{
-		u64 scale = 2.4;
-		return scale * setSize;
+		double scale =2;
+		return scale;
 
 		if (setSize <= (1 << 12))
 			return setSize;
@@ -105,7 +105,7 @@ namespace osuCrypto
 
 	inline u64 getSigma(u64 setSize)
 	{
-		return 80;
+		return 60;
 	}
 
 	inline u64 getFieldSizeInBits(u64 setSize)

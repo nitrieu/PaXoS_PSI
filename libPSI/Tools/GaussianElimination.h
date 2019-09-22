@@ -60,7 +60,7 @@ namespace osuCrypto {
 	// function to get matrix content 
 	inline static std::vector<std::array<block, prty2SuperBlkSize>> gaussianElimination(std::vector < std::vector<bool>>& mat, std::vector<std::array<block, prty2SuperBlkSize>>& y)
 	{
-		printMatrix(mat,y);
+		//printMatrix(mat,y);
 		int N = mat.size();
 		/* reduction into r.e.f. */
 		int singular_flag = forwardElim(mat, y);

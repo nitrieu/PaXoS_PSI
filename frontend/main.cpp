@@ -840,6 +840,7 @@ void Prty2_Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u6
 		recv.output(inputs, recvChls);
 		gTimer.setTimePoint("r_end");
 
+		std::cout << "\n==============Summary==============" << std::endl;
 		std::cout << "SetSize: " << inputs.size() << " vs " << theirSetSize
 			<< "   |  numThreads: " << numThreads <<"\n";
 		std::cout << gTimer << std::endl;
