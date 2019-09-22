@@ -23,16 +23,16 @@ namespace osuCrypto
 
 		mPrng.SetSeed(prng.get<block>());
 		if (isMalicious)
-			mFieldSize = 132;// getMalCodewordSize(mTheirInputSize);
+			mCuckooItemLength = 132;// getMalCodewordSize(mTheirInputSize);
 		else
-			mFieldSize = 132;//getShCodewordSize(mTheirInputSize);
+			mCuckooItemLength = 132;//getShCodewordSize(mTheirInputSize);
 
 		mNumBin = getBinSize(mTheirInputSize); //TODO: remove
 		mSigma = getSigma(mTheirInputSize);
 
 		mNumOTs = mNumBin + mSigma;
 
-		mPrytOtSender.configure(isMalicious, psiSecParam, mFieldSize);
+		mPrytOtSender.configure(isMalicious, psiSecParam, mCuckooItemLength);
 
 		std::vector<std::array<block, 2>> baseOtSend(128);
 		NaorPinkas baseOTs;
@@ -57,6 +57,10 @@ namespace osuCrypto
 
 	void PrtyMPsiSender::output(span<block> inputs, span<Channel> chls)
 	{
+		Timer sendTimer;
+		sendTimer.reset();
+		sendTimer.setTimePoint("s_online_start");
+
 		std::vector<std::thread> thrds(chls.size());
 		const bool isMultiThreaded = chls.size() > 1;
 		std::mutex mtx;
@@ -96,7 +100,7 @@ namespace osuCrypto
 		for (auto& thrd : thrds)
 			thrd.join();
 
-		gTimer.setTimePoint("s_oos");
+		sendTimer.setTimePoint("s_oos");
 
 		//TODO
 		/*if(mIsMalicious)
@@ -104,8 +108,7 @@ namespace osuCrypto
 
 		//Decode(Q,inputs)
 		Cuckoo_decode(inputs, mPrytOtSender.mQx, mPrytOtSender.mT, mNumBin, mSigma); //geting Decode(Q,x)
-
-		gTimer.setTimePoint("s_Cuckoo_decode");
+		sendTimer.setTimePoint("s_Cuckoo_decode");
 
 			//======compute PSI
 		auto psi_routine = [&](u64 t)
@@ -115,12 +118,19 @@ namespace osuCrypto
 			u64 tempEndIdx = (mMyInputSize * (t + 1) / thrds.size());
 			u64 endIdx = std::min(tempEndIdx, mMyInputSize);
 			block prtyEncoding1;
+			//Matrix<block> valQx =  Matrix<block>();
 
 			for (u64 i = startIdx; i < endIdx; i += stepSize)
 			{
 				auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
-				std::vector<u8> sendBuff(curStepSize * mMaskLength);
+				
+				//auto subInputs = inputs.subspan(i, curStepSize);
+				//Cuckoo_decode(subInputs, valQx, mPrytOtSender.mT, mNumBin, mSigma); //geting Decode(Q,x)
+				//memcpy(mPrytOtSender.mQx.data()+ i * mPrytOtSender.mQx.stride(),
+				//	valQx.data(), curStepSize * mPrytOtSender.mQx.stride() * sizeof(block));
 
+
+				std::vector<u8> sendBuff(curStepSize * mMaskLength);
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
 					//compute prtyEncoding1= H2(x, Decode(Q,x) +C(H1(x))*s)
@@ -148,6 +158,10 @@ namespace osuCrypto
 
 		for (auto& thrd : thrds)
 			thrd.join();
+
+		sendTimer.setTimePoint("s_done");
+		std::cout << sendTimer << "\n";
+
 	}
 
 

@@ -22,7 +22,7 @@ namespace osuCrypto {
 		PrtyMOtSender mPrytOtSender; //
 		bool mIsMalicious;
 
-		u64 mFieldSize;
+		u64 mCuckooItemLength;
 
 		PRNG mPrng;
 		BitVector mOtChoices;

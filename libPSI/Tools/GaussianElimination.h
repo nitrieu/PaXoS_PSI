@@ -530,38 +530,25 @@ namespace osuCrypto {
 	{
 #if 1
 		std::vector<block> functionR(xInputs.size());
-		std::vector<u64> hashes1(xInputs.size());
-		std::vector<u64> hashes2(xInputs.size());
-
 		yOutputs.resize(xInputs.size(), tblCuckoo.stride()); // row, col]
 
-		std::cout << yOutputs.size() << " yOutputs " << yOutputs.stride() << "\n";
-		std::cout << tblCuckoo.rows() << " tblCuckoo.rows() " << tblCuckoo.stride() << "\n";
-		std::cout << sigma << " sigma " << numBins << " numBins\n";
+		//std::cout << yOutputs.size() << " yOutputs " << yOutputs.stride() << "\n";
+		//std::cout << tblCuckoo.rows() << " tblCuckoo.rows() " << tblCuckoo.stride() << "\n";
+		//std::cout << sigma << " sigma " << numBins << " numBins\n";
 
 		
 		std::vector<block> ciphers(xInputs.size());
 		mAesFixedKey.ecbEncBlocks(xInputs.data(), xInputs.size(), ciphers.data());
 		mAesFixedKey.ecbEncBlocks(xInputs.data(), xInputs.size(), functionR.data()); // use diff key for R
 
-
-
-
-		for (int idxItem = 0; idxItem < xInputs.size(); idxItem++)
+		for (int i = 0; i< xInputs.size(); i++)
 		{
-			u64 hh1 = _mm_extract_epi64(ciphers[idxItem], 0);
-			u64 hh2 = _mm_extract_epi64(ciphers[idxItem], 1);
+			u64 hh1 = _mm_extract_epi64(ciphers[i], 0);
+			u64 hh2 = _mm_extract_epi64(ciphers[i], 1);
 
-			hashes1[idxItem] = hh1 % numBins; //1st 64 bits for finding bin location
-			hashes2[idxItem] = hh2 % numBins; //2nd 64 bits for finding alter bin location
-		}
-
-		//==========decode
-		for (int i = 0; i < xInputs.size(); ++i)
-		{
-			auto h1 = hashes1[i]; //row
-			auto h2 = hashes2[i];
-
+			auto h1 = hh1 % numBins; //1st 64 bits for finding bin location
+			auto h2 = hh2 % numBins; //2nd 64 bits for finding alter bin location
+		
 			block* lVal_h1 = tblCuckoo.data() + tblCuckoo.stride() * h1;
 			block* lVal_h2 = tblCuckoo.data() + tblCuckoo.stride() * h2;
 

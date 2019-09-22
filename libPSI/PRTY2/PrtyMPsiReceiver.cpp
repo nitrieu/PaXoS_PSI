@@ -27,15 +27,15 @@ namespace osuCrypto
 		mPrng.SetSeed(prng.get<block>());
 
 		if (isMalicious)
-			mFieldSize = 132;// getMalCodewordSize(myInputSize);
+			mCuckooItemLength = 132;// getMalCodewordSize(myInputSize);
 		else
-			mFieldSize = 132;//getShCodewordSize(myInputSize);
+			mCuckooItemLength = 132;//getShCodewordSize(myInputSize);
 
 		mNumBin = getBinSize(mTheirInputSize); //TODO: remove
 		mSigma = getSigma(mTheirInputSize);
 
 		mNumOTs = mNumBin + mSigma;
-		mPrytOtRecv.configure(isMalicious, psiSecParam, mFieldSize);
+		mPrytOtRecv.configure(isMalicious, psiSecParam, mCuckooItemLength);
 
 
 		std::vector<block> baseOtRecv(128);
@@ -59,6 +59,10 @@ namespace osuCrypto
 
 	void PrtyMPsiReceiver::output(span<block> inputs, span<Channel> chls)
 	{
+		Timer recvTimer;
+		recvTimer.reset();
+		recvTimer.setTimePoint("r_online_start");
+
 		std::vector<std::thread> thrds(chls.size());
 		const bool isMultiThreaded = chls.size() > 1;
 		std::mutex mtx;
@@ -73,7 +77,7 @@ namespace osuCrypto
 
 		// Generate a cuckoo table
 		Cuckoo_encode(inputs, yInputs, cuckooTables, mNumBin, mSigma); //single thread
-		gTimer.setTimePoint("r_Cuckoo_encode");
+		recvTimer.setTimePoint("r_Cuckoo_encode");
 
 
 		//==================OOS
@@ -104,7 +108,7 @@ namespace osuCrypto
 		for (auto& thrd : thrds)
 			thrd.join();
 		
-		gTimer.setTimePoint("r_oos");
+		recvTimer.setTimePoint("r_oos");
 
 
 		//TODO
@@ -113,7 +117,7 @@ namespace osuCrypto
 
 		//=========compute PSI last message
 		Cuckoo_decode(inputs, mPrytOtRecv.mRy, mPrytOtRecv.mT0, mNumBin, mSigma); //Decode(R,y) 
-		gTimer.setTimePoint("r_Cuckoo_decode");
+		recvTimer.setTimePoint("r_Cuckoo_decode");
 
 		auto psi_routine = [&](u64 t)
 		{
@@ -122,10 +126,18 @@ namespace osuCrypto
 			u64 tempEndIdx = (mMyInputSize * (t + 1) / thrds.size());
 			u64 endIdx = std::min(tempEndIdx, mMyInputSize);
 			block prtyEncoding2;
+			//Matrix<block> valRy = Matrix<block>();
 
 			for (u64 i = startIdx; i < endIdx; i += stepSize)
 			{
 				auto curStepSize = std::min<u64>(stepSize, inputs.size() - i);
+				
+				//auto subInputs = inputs.subspan(i, curStepSize);
+				//Cuckoo_decode(subInputs, valRy, mPrytOtRecv.mT0, mNumBin, mSigma); //Decode(R,y) 
+				//memcpy(mPrytOtRecv.mRy.data() + i * mPrytOtRecv.mRy.stride(),
+				//	valRy.data(), curStepSize * mPrytOtRecv.mRy.stride() * sizeof(block));
+
+
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
 					// compute prtyEncoding1=H2(y, Decode(R,y))
@@ -146,7 +158,6 @@ namespace osuCrypto
 
 		};
 
-		gTimer.setTimePoint("r_psi_encoding");
 
 
 		for (u64 i = 0; i < thrds.size(); ++i)
@@ -159,6 +170,7 @@ namespace osuCrypto
 		for (auto& thrd : thrds)
 			thrd.join();
 
+		recvTimer.setTimePoint("r_psi_encoding");
 
 
 		/*for (auto match = localMasks.begin(); match != localMasks.end(); ++match)
@@ -227,7 +239,8 @@ namespace osuCrypto
 				{
 					for (u64 k = 0; k < curStepSize; ++k)
 					{
-						for (auto match = localMasks.begin(); match != localMasks.end(); ++match)
+						bool isFound = false;
+						for (auto match = localMasks.begin(); match != localMasks.end() && isFound==false; ++match)
 						{
 							if (memcmp(theirMasks, &match->second.first, mMaskLength)) // check full mask
 							{
@@ -238,6 +251,9 @@ namespace osuCrypto
 								}
 								else
 									mIntersection.push_back(match->second.second);
+								
+								isFound = true;
+								break;
 							}
 
 						}
@@ -261,6 +277,8 @@ namespace osuCrypto
 		for (auto& thrd : thrds)
 			thrd.join();
 
+		recvTimer.setTimePoint("r_done");
+		std::cout << recvTimer << "\n";
 	}
 
 }

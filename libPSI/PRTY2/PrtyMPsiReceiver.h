@@ -30,7 +30,7 @@ namespace osuCrypto
 
 		u64 mMyInputSize, mTheirInputSize, mMaskLength, mPsiSecParam, mNumBin, mSigma, mNumOTs;
 		std::vector<block> mS;
-		u64 mFieldSize;
+		u64 mCuckooItemLength;
 
 		PrtyMOtReceiver mPrytOtRecv; //
 		
