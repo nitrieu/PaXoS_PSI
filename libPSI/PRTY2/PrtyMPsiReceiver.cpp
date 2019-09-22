@@ -72,6 +72,7 @@ namespace osuCrypto
 
 		// Generate a cuckoo table
 		Cuckoo_encode(inputs, yInputs, cuckooTables, mNumBin, mSigma); //single thread
+		gTimer.setTimePoint("r_Cuckoo_encode");
 
 
 		//==================OOS

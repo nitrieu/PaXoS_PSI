@@ -779,13 +779,14 @@ void Prty_PSI_impl()
 
 #ifdef PRTY2
 
-void Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
+void Prty2_Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
 {
-	u64 psiSecParam = 40;
+	u64  psiSecParam = 40;
 
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
-	// set up networking
+		// set up networking
 	std::string name = "n";
 	IOService ios;
 	Endpoint ep1(ios, ipAddr_Port, EpMode::Server, name);
@@ -795,29 +796,28 @@ void Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThr
 		sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
 
 	PrtyMPsiSender sender;
+
 	gTimer.reset();
 	gTimer.setTimePoint("s_start");
-
-	sender.init(inputs.size(), theirSetSize, 40, prng0, sendChls);
+	
+	sender.init(inputs.size(), theirSetSize, 40, prng0, sendChls, true);
 	gTimer.setTimePoint("s_offline");
-	
-	sender.output(inputs, sendChls);
-	
 
+	sender.output(inputs, sendChls);
 	gTimer.setTimePoint("s_end");
 	std::cout << gTimer << std::endl;
 
 	for (u64 i = 0; i < numThreads; ++i)
-		sendChls[i].close();
+		sendChls[i].close(); 
 
-	ep1.stop();	ios.stop();
+	 ep1.stop();	ios.stop();
 }
 
-
-void Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
+void Prty2_Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
 {
-	u64 psiSecParam = 40;
+	u64  psiSecParam = 40;
 
+	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 	// set up networking
@@ -825,56 +825,54 @@ void Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numT
 	IOService ios;
 	Endpoint ep0(ios, ipAddr_Port, EpMode::Client, name);
 
-	std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+	std::vector<Channel> recvChls(numThreads);
 	for (u64 i = 0; i < numThreads; ++i)
 		recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
 
-	PrtyMPsiSender recv;
+	PrtyMPsiReceiver recv;
+
 	gTimer.reset();
 	gTimer.setTimePoint("r_start");
 
-	recv.init(inputs.size(), theirSetSize, 40, prng1, recvChls); //offline
+		recv.init(inputs.size(), theirSetSize, 40, prng1, recvChls, true);
+		gTimer.setTimePoint("r_offline");
 
-	gTimer.setTimePoint("r_offline");
-
-	
-	recv.output(inputs, recvChls);
-	
+		recv.output(inputs, recvChls);
+		gTimer.setTimePoint("r_end");
+		std::cout << gTimer << std::endl;
 
 
-	gTimer.setTimePoint("r_end");
+		u64 dataSent = 0, dataRecv(0);
+		for (u64 g = 0; g < recvChls.size(); ++g)
+		{
+			dataSent += recvChls[g].getTotalDataSent();
+			dataRecv += recvChls[g].getTotalDataRecv();
+			recvChls[g].resetStats();
+		}
 
-	std::cout << gTimer << std::endl;
+		std::cout << "      Total Comm = " << string_format("%5.2f", (dataRecv + dataSent) / std::pow(2.0, 20)) << " MB\n";
 
-	//std::cout << "recv.mIntersection  : " << recv.mIntersection.size() << std::endl;
-	//std::cout << "expectedIntersection: " << expectedIntersection << std::endl;
+
+	std::cout << "recv.mIntersection  : " << recv.mIntersection.size() << std::endl;
+	std::cout << "expectedIntersection: " << expectedIntersection << std::endl;
 	//for (u64 i = 0; i < recv.mIntersection.size(); ++i)//thrds.size()
 	//{
-	//	/*std::cout << "#id: " << recv.mIntersection[i] <<
-	//		"\t" << inputs[recv.mIntersection[i]] << std::endl;*/
+	//	std::cout << "#id: " << recv.mIntersection[i] <<
+	//		"\t" << inputs[recv.mIntersection[i]] << std::endl;
 	//}
 
-	u64 dataSent = 0, dataRecv(0);
-	for (u64 g = 0; g < recvChls.size(); ++g)
-	{
-		dataSent += recvChls[g].getTotalDataSent();
-		dataRecv += recvChls[g].getTotalDataRecv();
-		recvChls[g].resetStats();
-	}
-
-	std::cout << "      Total Comm = " << string_format("%5.2f", (dataRecv + dataSent) / std::pow(2.0, 20)) << " MB\n";
 
 	for (u64 i = 0; i < numThreads; ++i)
+	{
 		recvChls[i].close();
+	}
 
-	ep0.stop(); ios.stop();
+	ep0.stop();	ios.stop();
 
 }
 
-
 void Prty2_Psi_demo()
 {
-	setThreadName("Sender");
 	u64 setSenderSize = 1 << 5, setRecvSize = 1 << 5, psiSecParam = 40, numThreads(1);
 
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
@@ -948,8 +946,8 @@ void Prty2_Psi_demo()
 
 int main(int argc, char** argv)
 {
-	Prty2_Psi_demo();
-	return 0;
+	//Prty2_Psi_demo();
+	//return 0;
 
 	/*CuckooHasher_Test_Impl();
 	return 0;*/
@@ -960,48 +958,6 @@ int main(int argc, char** argv)
 
 	string ipadrr = "localhost:1212";
 
-	if (argc == 10
-		&& argv[3][0] == '-' 
-		&& argv[3][1] == 'e' && argv[3][2] == 'c' && argv[3][3] == 'h' && argv[3][4] == 'd'
-		&& argv[4][0] == '-' && argv[4][1] == 'c'
-		&& argv[6][0] == '-' && argv[6][1] == 'n'
-		&& argv[8][0] == '-' && argv[8][1] == 'i' && argv[8][2] == 'p')
-	{
-
-		int curveType= atoi(argv[5]);
-		int	setSize= 1 << atoi(argv[7]);
-		ipadrr =argv[9];
-
-		std::cout << "SetSize: " << setSize << "\n";
-
-		if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) 
-			EcdhSend(curveType, setSize, ipadrr, 1);
-		
-		if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) 
-			EcdhRecv(curveType, setSize, ipadrr, 1);
-
-
-		//echd: Curve25519
-		//--server : . / bin / frontend.exe - r 0 - echd - c 1 - n 8 - ip 172.31.22.179 : 1212
-		//--client : . / bin / frontend.exe - r 1 - echd - c 1 - n 8 - ip 172.31.22.179 : 1212
-
-		//echd : k283
-		//--server : . / bin / frontend.exe - r 0 - echd - c 0 - n 8 - ip 172.31.22.179 : 1212
-		//--client : . / bin / frontend.exe - r 1 - echd - c 0 - n 8 - ip 172.31.22.179 : 1212
-
-		return 0;
-	}
-
-	/*prfOtRow_Test_Impl();
-	return 0;*/
-
-	/*prfOtRow_Test_Impl();
-	return 0; */
-	/*Hashing_Test_Impl();
-	return 0;*/
-
-	/*Prty_PSI_impl();
-	return 0;*/
 	
 	u64 sendSetSize = 1 << 8, recvSetSize = 1 << 8, numThreads = 1;
 	
@@ -1016,22 +972,6 @@ int main(int argc, char** argv)
 		recvSetSize =  atoi(argv[6]);
 		numThreads = atoi(argv[8]);
 		ipadrr = argv[10];
-		protocolId = 1;
-
-
-	}
-
-	if (argc == 11
-		&& argv[3][0] == '-' && argv[3][1] == 'n'
-		&& argv[5][0] == '-' && argv[5][1] == 't'
-		&& argv[7][0] == '-' && argv[7][1] == 'p'
-		&& argv[9][0] == '-' && argv[9][1] == 'i' && argv[9][2] == 'p')
-	{
-		sendSetSize = 1 << atoi(argv[4]);
-		recvSetSize = sendSetSize;
-		numThreads = atoi(argv[6]);
-		protocolId = atoi(argv[8]);
-		ipadrr = argv[10];
 	}
 
 	if (argc == 9
@@ -1045,6 +985,12 @@ int main(int argc, char** argv)
 		ipadrr = argv[8];
 	}
 
+	if (argc == 5
+		&& argv[3][0] == '-' && argv[3][1] == 'n')
+	{
+		sendSetSize = 1 << atoi(argv[4]);
+		recvSetSize = sendSetSize;
+	}
 
 		
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
@@ -1052,13 +998,6 @@ int main(int argc, char** argv)
 	
 	std::cout << "SetSize: " << sendSetSize << " vs " << recvSetSize << "   |  numThreads: " << numThreads<< "\t";
 	
-	if(protocolId==0)
-		std::cout << "   |   IsCommOptimzed: No \n";
-	else
-		std::cout << "   |   IsCommOptimzed: Yes \n";
-
-
-
 	
 	for (u64 i = 0; i < sendSetSize; ++i)
 		sendSet[i] = prng0.get<block>();
@@ -1074,12 +1013,11 @@ int main(int argc, char** argv)
 	
 #if 0
 	std::thread thrd = std::thread([&]() {
-		Sender(sendSet, recvSetSize, numThreads);
+		Prty2_Sender(sendSet, recvSetSize, "localhost:1212");
 
 	});
 
-	Receiver(recvSet, sendSetSize, numThreads);
-
+	Prty2_Receiver(recvSet, sendSetSize, "localhost:1212");
 
 	thrd.join();
 	return 0;
@@ -1090,19 +1028,19 @@ int main(int argc, char** argv)
 	if (argv[1][0] == '-' && argv[1][1] == 't') {
 		
 		std::thread thrd = std::thread([&]() {
-			Sender(sendSet, recvSetSize,"localhost:1212", numThreads);
+			Prty2_Sender(sendSet, recvSetSize,"localhost:1212", numThreads);
 		});
 
-		Receiver(recvSet, sendSetSize, "localhost:1212", numThreads);
+		Prty2_Receiver(recvSet, sendSetSize, "localhost:1212", numThreads);
 
 		thrd.join();
 
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) {
-		Sender(sendSet, recvSetSize, ipadrr, numThreads);
+		Prty2_Sender(sendSet, recvSetSize, ipadrr, numThreads);
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) {
-		Receiver(recvSet, sendSetSize, ipadrr, numThreads);
+		Prty2_Receiver(recvSet, sendSetSize, ipadrr, numThreads);
 	}
 	else {
 		usage(argv[0]);
