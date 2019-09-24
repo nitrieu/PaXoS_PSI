@@ -963,7 +963,7 @@ int main(int argc, char** argv)
 	string ipadrr = "localhost:1212";
 
 	
-	u64 sendSetSize = 1 << 8, recvSetSize = 1 << 8, numThreads = 1;
+	u64 sendSetSize = 1 << 12, recvSetSize = 1 << 12, numThreads = 1;
 	
 
 	if (argc == 11
@@ -1015,7 +1015,7 @@ int main(int argc, char** argv)
 	}
 
 	
-#if 0
+#if 1
 	std::thread thrd = std::thread([&]() {
 		Prty2_Sender(sendSet, recvSetSize, "localhost:1212");
 
