@@ -198,7 +198,6 @@ namespace osuCrypto
 		
 		//std::cout << idx << ": " << ryVal[0] << " - " << ryVal[1]<<" recv.ryVal\n";
 
-
 #ifdef PRTY_SHA_HASH
 			RandomOracle  sha1(destSize);
 			// now hash it to remove the correlation.
@@ -207,20 +206,20 @@ namespace osuCrypto
 			sha1.Final((u8*)dest);
 #else
 			//H(x) = AES_f(H'(x)) + H'(x), where  H'(x) = AES_f(x_0) + x_0 + ... +  AES_f(x_n) + x_n.
-			mAesFixedKey.ecbEncFourBlocks(t0Val, codeword.data());
+			std::vector<block> aesBuff(mRy.stride());
+			mAesFixedKey.ecbEncBlocks(ryVal, mRy.stride(), aesBuff.data());
 
-			codeword[0] = codeword[0] ^ t0Val[0];
-			codeword[1] = codeword[1] ^ t0Val[1];
-			codeword[2] = codeword[2] ^ t0Val[2];
-			codeword[3] = codeword[3] ^ t0Val[3];
+			block hx = ZeroBlock, aeshx;
+			for (u64 i = 0; i < mRy.stride(); ++i)
+			{
+				hx = hx ^ ryVal[i];
+				hx = hx ^ aesBuff[i];
+			}
 
-			val = codeword[0] ^ codeword[1];
-			codeword[2] = codeword[2] ^ codeword[3];
+			mAesFixedKey.ecbEncBlock(hx, aeshx);
+			hx = hx ^ aeshx;
+			memcpy(dest,(u8*)&hx, destSize);
 
-			val = val ^ codeword[2];
-
-			mAesFixedKey.ecbEncBlock(val, codeword[0]);
-			val = val ^ codeword[0];
 #endif
 	}
 
@@ -306,7 +305,7 @@ namespace osuCrypto
         block* t0Val = mT0.data() + mT0.stride() * otIdx;
      
 
-#ifdef PRTY_SHA_HASH
+#ifdef OOS_SHA_HASH
 		RandomOracle  sha1;
 		u8 hashBuff[RandomOracle::HashSize];
 		// now hash it to remove the correlation.

@@ -72,7 +72,7 @@ namespace osuCrypto
 			for (int k = 0; k < prty2SuperBlkSize; k++)
 				yInputs[idxItem][k] = inputs[idxItem];  // fake H1(x)
 
-		std::unordered_map<u32, std::pair<block, u64>> localMasks;
+		std::unordered_map<u64, std::pair<block, u64>> localMasks;
 		localMasks.reserve(mMyInputSize);
 
 		// Generate a cuckoo table
@@ -149,10 +149,10 @@ namespace osuCrypto
 					if (isMultiThreaded)
 					{
 						std::lock_guard<std::mutex> lock(mtx);
-						localMasks.emplace(*(u32*)& prtyEncoding2, std::pair<block, u64>(prtyEncoding2, i+k));
+						localMasks.emplace(*(u64*)& prtyEncoding2, std::pair<block, u64>(prtyEncoding2, i+k));
 					}
 					else
-						localMasks.emplace(*(u32*)& prtyEncoding2, std::pair<block, u64>(prtyEncoding2, i + k));
+						localMasks.emplace(*(u64*)& prtyEncoding2, std::pair<block, u64>(prtyEncoding2, i + k));
 				}
 			}
 
@@ -203,13 +203,13 @@ namespace osuCrypto
 
 				std::cout << IoStream::lock << "r theirMasks: " << aa << std::endl << IoStream::unlock;*/
 
-				if (mMaskLength >= sizeof(u32))
+				if (mMaskLength >= sizeof(u64))
 				{
 					for (u64 k = 0; k < curStepSize; ++k)
 					{
 						//auto match = localMasks.find(*(u64*)& theirMasks);
 
-						auto& msk = *(u32*)(theirMasks);
+						auto& msk = *(u64*)(theirMasks);
 						// check 64 first bits
 						auto match = localMasks.find(msk);
 
