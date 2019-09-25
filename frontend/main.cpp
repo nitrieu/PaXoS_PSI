@@ -1029,7 +1029,7 @@ int main(int argc, char** argv)
 	}
 
 	
-#if 0
+#if 1
 	std::thread thrd = std::thread([&]() {
 		Prty2_Sender(sendSet, recvSetSize, isMalicious, "localhost:1212");
 

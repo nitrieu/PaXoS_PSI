@@ -52,7 +52,11 @@ namespace osuCrypto
 		mPrytOtSender.setBaseOts(baseRecv, mOtChoices);
 
 		//number OT we need
-		mPrytOtSender.init(mNumOTs, mPrng, chls[0]);
+		if (isMalicious) //need more 40 OT for consistency check
+			mPrytOtSender.init(mNumOTs + psiSecParam, mPrng, chls[0]);
+		else
+			mPrytOtSender.init(mNumOTs, mPrng, chls[0]);
+
 	}
 
 	void PrtyMPsiSender::output(span<block> inputs, span<Channel> chls)
@@ -102,9 +106,9 @@ namespace osuCrypto
 
 		sendTimer.setTimePoint("s_oos");
 
-		//TODO
-		/*if(mIsMalicious)
-			mPrytOtSender.check(chls[0], mPrng.get<block>());*/
+		//TODO: fix the correctness
+		if(mIsMalicious)
+			mPrytOtSender.check(chls[0], mPrng.get<block>());
 
 		//Decode(Q,inputs)
 		Cuckoo_decode(inputs, mPrytOtSender.mQx, mPrytOtSender.mT, mNumBin, mSigma); //geting Decode(Q,x)

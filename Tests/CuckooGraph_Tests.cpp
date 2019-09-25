@@ -746,9 +746,9 @@ namespace tests_libOTe
 			sender.init(numOTs, prng0, sendChl);
 
 			// Get the random OT messages
-			for (u64 i = 0; i < numOTs; i += stepSize)
+			for (u64 i = 0; i < numOTs- 40; i += stepSize)
 			{
-				auto curStepSize = std::min<u64>(stepSize, numOTs - i);
+				auto curStepSize = std::min<u64>(stepSize, numOTs - 40 - i);
 				sender.recvCorrection(sendChl, curStepSize);
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
@@ -758,16 +758,16 @@ namespace tests_libOTe
 				}
 			}
 
-			//sender.check(sendChl, toBlock(322334));
+			sender.check(sendChl, toBlock(322334));
 
 			});
 
 		recv.init(numOTs, prng1, recvChl);
 
 		// Get the random OT messages
-		for (u64 i = 0; i < numOTs; i += stepSize)
+		for (u64 i = 0; i < numOTs-40; i += stepSize)
 		{
-			auto curStepSize = std::min<u64>(stepSize, numOTs - i);
+			auto curStepSize = std::min<u64>(stepSize, numOTs - 40 - i);
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
 				recv.otCorrection(i + k, &inputs[k + i]);
@@ -776,7 +776,7 @@ namespace tests_libOTe
 			recv.sendCorrection(recvChl, curStepSize);
 		}
 
-		//recv.check(recvChl, toBlock(322334));
+		recv.check(recvChl, toBlock(322334));
 
 		thrd.join();
 

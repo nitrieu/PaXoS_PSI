@@ -476,7 +476,8 @@ namespace osuCrypto
                 prng.get((u8*)words[i].data(), mInputByteCount);
 
                 // the correction value is stored internally
-                encode(mCorrectionIdx + i, words[i].data(), (u8*)&_);
+				otCorrection(mCorrectionIdx + i, words[i].data());
+                //encode(mCorrectionIdx + i, words[i].data(), (u8*)&_);
 
                 // initialize the tSum array with the T0 value used to encode these
                 // random words.
@@ -681,8 +682,9 @@ namespace osuCrypto
                         }
                     }
 
-                    if (mW.stride() != 1)
-                        throw std::runtime_error("generalize this code vvvvvv " LOCATION);
+					//TODO: make it work with > blocks
+                    /*if (mW.stride() != 1)
+                        throw std::runtime_error("generalize this code vvvvvv " LOCATION);*/
 
                     xIter = byteView;
                     for (u64 i = 0; i < stopIdx; ++i, ++mWIter)

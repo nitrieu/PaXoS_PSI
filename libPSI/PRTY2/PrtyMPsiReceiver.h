@@ -28,7 +28,7 @@ namespace osuCrypto
 		bool mHasBase;
 		bool mIsMalicious;
 
-		u64 mMyInputSize, mTheirInputSize, mMaskLength, mPsiSecParam, mNumBin, mSigma, mNumOTs;
+		u64 mMyInputSize, mTheirInputSize, mMaskLength, mPsiSecParam, mNumBin, mSigma, mNumOTs, mMalNumOTs;
 		std::vector<block> mS;
 		std::pair<u64, u64> mCuckooItemLength;
 
