@@ -4,7 +4,7 @@
 #include <cryptoTools/Crypto/RandomOracle.h>
 #include <cryptoTools/Network/Channel.h>
 #include "PrtyMDefines.h"
-#include "Tools/mx_132_by_583.h"
+#include "Tools/mx_linear_code.h"
 
 
 namespace osuCrypto
@@ -476,11 +476,27 @@ namespace osuCrypto
         u64 statSecParam,
         u64 inputBitCount)
     {
-        if (inputBitCount <= 132)
-        {
-            mCode.load(mx132by583, sizeof(mx132by583));
-            //mCode.loadTxtFile("C:/Users/peter/repo/libOTe/libOTe/Tools/bch511.txt");
-        }
+		
+		//===========Semi-honest
+		if (inputBitCount == 64)
+			mCode.load(mx64by448, sizeof(mx64by448));
+
+		//else if (inputBitCount == 72)
+		//	mCode.load(mx64, sizeof(mx64by448));
+
+		else if (inputBitCount == 80)
+			mCode.load(mx80by495, sizeof(mx80by495));
+
+		/*else if (inputBitCount == 72)
+			mCode.load(mx64by448, sizeof(mx64by448));*/
+		
+	/*	else if (inputBitCount == 88)
+			mCode.load(mx64by448, sizeof(mx64by448));*/
+
+		//===========Malicous
+		else if (inputBitCount == 132)
+			mCode.load(mx132by583, sizeof(mx132by583));
+		
         else
             throw std::runtime_error(LOCATION);
 

@@ -779,7 +779,7 @@ void Prty_PSI_impl()
 
 #ifdef PRTY2
 
-void Prty2_Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
+void Prty2_Sender(span<block> inputs, u64 theirSetSize, bool isMalicious, string ipAddr_Port, u64 numThreads = 1)
 {
 	u64  psiSecParam = 40;
 
@@ -800,7 +800,7 @@ void Prty2_Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 
 	gTimer.reset();
 	gTimer.setTimePoint("s_start");
 	
-	sender.init(inputs.size(), theirSetSize, 40, prng0, sendChls, true);
+	sender.init(inputs.size(), theirSetSize, 40, prng0, sendChls, isMalicious);
 	gTimer.setTimePoint("s_offline");
 
 	sender.output(inputs, sendChls);
@@ -813,7 +813,7 @@ void Prty2_Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 
 	 ep1.stop();	ios.stop();
 }
 
-void Prty2_Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
+void Prty2_Receiver(span<block> inputs, u64 theirSetSize, bool isMalicious, string ipAddr_Port, u64 numThreads = 1)
 {
 	u64  psiSecParam = 40;
 
@@ -834,7 +834,7 @@ void Prty2_Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u6
 	gTimer.reset();
 	gTimer.setTimePoint("r_start");
 
-		recv.init(inputs.size(), theirSetSize, 40, prng1, recvChls, true);
+		recv.init(inputs.size(), theirSetSize, 40, prng1, recvChls, isMalicious);
 		gTimer.setTimePoint("r_offline");
 
 		recv.output(inputs, recvChls);
@@ -842,7 +842,8 @@ void Prty2_Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u6
 
 		std::cout << "\n==============Summary==============" << std::endl;
 		std::cout << "SetSize: " << inputs.size() << " vs " << theirSetSize
-			<< "   |  numThreads: " << numThreads <<"\n";
+			<< "   |  isMalicious: " << isMalicious << "\t";
+
 		std::cout << gTimer << std::endl;
 
 
@@ -877,7 +878,8 @@ void Prty2_Receiver(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u6
 
 void Prty2_Psi_demo()
 {
-	u64 setSenderSize = 1 << 5, setRecvSize = 1 << 5, psiSecParam = 40, numThreads(1);
+	u64 isMalicious = false;
+	u64 setSenderSize = 1 << 8, setRecvSize = 1 << 8, psiSecParam = 40, numThreads(1);
 
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
@@ -914,11 +916,11 @@ void Prty2_Psi_demo()
 	PrtyMPsiReceiver recv;
 
 	auto thrd = std::thread([&]() {
-		recv.init(recvSet.size(), sendSet.size(), 40, prng1, recvChls, true);
+		recv.init(recvSet.size(), sendSet.size(), 40, prng1, recvChls, isMalicious);
 		recv.output(recvSet, recvChls);
 		});
 
-	sender.init(sendSet.size(), recvSet.size(), 40, prng0, sendChls, true);
+	sender.init(sendSet.size(), recvSet.size(), 40, prng0, sendChls, isMalicious);
 	sender.output(sendSet, sendChls);
 
 	thrd.join();
@@ -950,6 +952,8 @@ void Prty2_Psi_demo()
 
 int main(int argc, char** argv)
 {
+	/*Prty2_Psi_demo();
+	return 0;*/
 	//Prty2_Psi_demo();
 	//return 0;
 
@@ -964,29 +968,37 @@ int main(int argc, char** argv)
 
 	
 	u64 sendSetSize = 1 << 12, recvSetSize = 1 << 12, numThreads = 1;
+	bool isMalicious=false;
 	
 
-	if (argc == 11
+	if (argc == 9
 		&& argv[3][0] == '-' && argv[3][1] == 'n'
 		&& argv[5][0] == '-' && argv[5][1] == 'N'
-		&& argv[7][0] == '-' && argv[7][1] == 't'
 		&& argv[9][0] == '-' && argv[9][1] == 'i' && argv[9][2] == 'p')
 	{
 		sendSetSize = 1 << atoi(argv[4]);
 		recvSetSize =  atoi(argv[6]);
-		numThreads = atoi(argv[8]);
-		ipadrr = argv[10];
+		ipadrr = argv[8];
 	}
 
 	if (argc == 9
 		&& argv[3][0] == '-' && argv[3][1] == 'n'
-		&& argv[5][0] == '-' && argv[5][1] == 't'
+		&& argv[5][0] == '-' && argv[5][1] == 's'
+		&& argv[7][0] == '-' && argv[7][1] == 'i' && argv[7][2] == 'p')
+	{
+		sendSetSize = 1 << atoi(argv[4]);
+		isMalicious = atoi(argv[6]);
+		recvSetSize = sendSetSize;
+		ipadrr = argv[6];
+	}
+
+	if (argc == 7
+		&& argv[3][0] == '-' && argv[3][1] == 'n'
 		&& argv[7][0] == '-' && argv[7][1] == 'i' && argv[7][2] == 'p')
 	{
 		sendSetSize = 1 << atoi(argv[4]);
 		recvSetSize = sendSetSize;
-		numThreads = atoi(argv[6]);
-		ipadrr = argv[8];
+		ipadrr = argv[6];
 	}
 
 	if (argc == 5
@@ -996,11 +1008,13 @@ int main(int argc, char** argv)
 		recvSetSize = sendSetSize;
 	}
 
+
+
 		
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	std::vector<block> sendSet(sendSetSize), recvSet(recvSetSize);
 	
-	std::cout << "SetSize: " << sendSetSize << " vs " << recvSetSize << "   |  numThreads: " << numThreads<< "\t";
+	std::cout << "SetSize: " << sendSetSize << " vs " << recvSetSize << "   |  isMalicious: " << isMalicious << "\n";
 	
 	
 	for (u64 i = 0; i < sendSetSize; ++i)
@@ -1017,11 +1031,11 @@ int main(int argc, char** argv)
 	
 #if 1
 	std::thread thrd = std::thread([&]() {
-		Prty2_Sender(sendSet, recvSetSize, "localhost:1212");
+		Prty2_Sender(sendSet, recvSetSize, isMalicious, "localhost:1212");
 
 	});
 
-	Prty2_Receiver(recvSet, sendSetSize, "localhost:1212");
+	Prty2_Receiver(recvSet, sendSetSize, isMalicious, "localhost:1212");
 
 	thrd.join();
 	return 0;
@@ -1032,19 +1046,19 @@ int main(int argc, char** argv)
 	if (argv[1][0] == '-' && argv[1][1] == 't') {
 		
 		std::thread thrd = std::thread([&]() {
-			Prty2_Sender(sendSet, recvSetSize,"localhost:1212", numThreads);
+			Prty2_Sender(sendSet, recvSetSize, isMalicious,"localhost:1212", numThreads);
 		});
 
-		Prty2_Receiver(recvSet, sendSetSize, "localhost:1212", numThreads);
+		Prty2_Receiver(recvSet, sendSetSize, isMalicious, "localhost:1212", numThreads);
 
 		thrd.join();
 
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) {
-		Prty2_Sender(sendSet, recvSetSize, ipadrr, numThreads);
+		Prty2_Sender(sendSet, recvSetSize, isMalicious, ipadrr, numThreads);
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) {
-		Prty2_Receiver(recvSet, sendSetSize, ipadrr, numThreads);
+		Prty2_Receiver(recvSet, sendSetSize, isMalicious, ipadrr, numThreads);
 	}
 	else {
 		usage(argv[0]);

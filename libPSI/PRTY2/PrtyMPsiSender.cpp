@@ -20,19 +20,19 @@ namespace osuCrypto
 		mMaskLength = (psiSecParam + log2(mTheirInputSize * mMyInputSize) + 7) / 8;
 		mIsMalicious = isMalicious;
 
-
 		mPrng.SetSeed(prng.get<block>());
+
 		if (isMalicious)
-			mCuckooItemLength = 132;// getMalCodewordSize(mTheirInputSize);
+			mCuckooItemLength = getMalCodewordSize(mTheirInputSize);
 		else
-			mCuckooItemLength = 132;//getShCodewordSize(mTheirInputSize);
+			mCuckooItemLength = getShCodewordSize(mTheirInputSize);
 
 		mNumBin = floor(mTheirInputSize * getBinScaleSize(mTheirInputSize)); //TODO: remove
 		mSigma = getSigma(mTheirInputSize);
 
 		mNumOTs = mNumBin + mSigma;
 
-		mPrytOtSender.configure(isMalicious, psiSecParam, mCuckooItemLength);
+		mPrytOtSender.configure(isMalicious, psiSecParam, mCuckooItemLength.first);
 
 		std::vector<std::array<block, 2>> baseOtSend(128);
 		NaorPinkas baseOTs;
