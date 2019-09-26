@@ -78,6 +78,8 @@ using namespace osuCrypto;
 #include <vector>
 #include <stdarg.h> 
 #include "ecdhMain.h"
+#include "cryptoTools/Crypto/Curve.h"
+
 
 template<typename ... Args>
 std::string string_format(const std::string& format, Args ... args)
@@ -122,6 +124,7 @@ void usage(const char* argv0)
 
 }
 
+//#define PRTY_C19
 #ifdef PRTY_C19
 
 void Sender(span<block> inputs, u64 theirSetSize, string ipAddr_Port, u64 numThreads = 1)
@@ -777,6 +780,304 @@ void Prty_PSI_impl()
 
 #define PRTY2
 
+
+#include "Poly/polyFFT.h"
+void Poly_Test_Impl() {
+
+
+	int degree = 1<<20;
+	int numTrials = 1;// (degree - 1 + (1 << 8)) / degree;
+	long numSlice = 4;
+	int subField = 128;
+	int fieldSize = 128;
+	int numThread = 16;
+	std::cout << "FieldSize: " << fieldSize << "\t";
+	//std::cout << "subField: " << subField << "\t";
+	//std::cout << "numSlice: " << numSlice << "\t";
+	std::cout << "degree: " << degree << "\t";
+	std::cout << "numThread: " << numThread << "\n";
+	//std::cout << "#bin: " << numTrials << "\n";
+
+#if 0
+
+	//#################Quaratic GF2EX################################
+	{
+		NTL::GF2X mGf2x;
+		NTL::BuildIrred(mGf2x, fieldSize);
+		NTL::GF2E::init(mGf2x);
+		NTL::GF2E e;
+
+		NTL::vec_GF2E vecX, vecY;
+		NTL::GF2EX polynomial;
+
+		for (u64 i = 0; i <= degree; ++i)
+		{
+			NTL::random(e);
+			vecX.append(e);
+			NTL::random(e);
+			vecY.append(e);
+		}
+
+		gTimer.reset();
+		gTimer.setTimePoint("start");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+			polynomial = NTL::interpolate(vecX, vecY);
+
+		gTimer.setTimePoint("interpolate");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+			for (int i = 0; i <= degree; ++i)
+			{
+				e = NTL::eval(polynomial, vecX[i]); //2x
+				e = NTL::eval(polynomial, vecX[i]); //2x
+			}
+
+		gTimer.setTimePoint("eval GF2EX n^2");
+		std::cout << gTimer << std::endl;
+	}
+
+
+
+	//#################Slicing Quaratic GF2EX################################
+	{
+		NTL::GF2X gf2x;
+		NTL::BuildIrred(gf2x, subField);
+		NTL::GF2E::init(gf2x);
+		NTL::GF2E e2;
+
+		NTL::vec_GF2E vecX2;
+		std::vector<NTL::vec_GF2E> vecY2(numSlice);
+		NTL::GF2EX polynomial;
+
+		for (u64 i = 0; i <= degree; ++i)
+		{
+			NTL::random(e2);
+			vecX2.append(e2);
+		}
+
+		for (int j = 0; j < numSlice; j++)
+		{
+			for (unsigned int i = 0; i <= degree; i++)
+			{
+				NTL::random(e2);
+				vecY2[j].append(e2);
+			}
+		}
+
+
+		gTimer.reset();
+		gTimer.setTimePoint("start");
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+		{
+			for (int j = 0; j < numSlice; j++)
+				polynomial = NTL::interpolate(vecX2, vecY2[j]);
+		}
+
+		gTimer.setTimePoint("interpolate");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+			for (int i = 0; i <= degree; ++i)
+			{
+				e2 = NTL::eval(polynomial, vecX2[i]); //2x
+				e2 = NTL::eval(polynomial, vecX2[i]); //2x
+			}
+
+		gTimer.setTimePoint("eval slicing GF2EX n^2");
+
+
+		std::cout << gTimer << std::endl;
+	}
+
+	//#################Quaratic ZZ_p################################
+	{
+		ZZ prime;
+		GenGermainPrime(prime, fieldSize);
+		ZZ_p::init(ZZ(prime));
+		ZZ_p p;
+		vec_ZZ_p x, y;
+
+		NTL::ZZ_pX polynomial;
+
+		for (u64 i = 0; i <= degree; ++i)
+		{
+			NTL::random(p);
+			x.append(p);
+			NTL::random(p);
+			y.append(p);
+		}
+
+		gTimer.reset();
+		gTimer.setTimePoint("start");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+			polynomial = NTL::interpolate(x, y);
+
+
+		gTimer.setTimePoint("interpolate");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+			for (int i = 0; i <= degree; ++i)
+			{
+				p = NTL::eval(polynomial, x[i]); //2x
+				p = NTL::eval(polynomial, x[i]); //2x
+			}
+
+		gTimer.setTimePoint("eval Quaratic ZZ_p");
+		std::cout << gTimer << std::endl;
+	}
+
+
+	//#################Quaratic ZZ_p Slicing################################
+	{
+		ZZ prime2;
+		GenGermainPrime(prime2, subField);
+		ZZ_p p;
+		ZZ_p::init(ZZ(prime2));
+		NTL::ZZ_pX polynomial;
+
+		vec_ZZ_p x;
+		for (unsigned int i = 0; i <= degree; i++) {
+			NTL::random(p);
+			x.append(p);
+		}
+
+		std::vector<vec_ZZ_p> y2(numSlice);
+
+		for (int j = 0; j < numSlice; j++)
+		{
+			for (unsigned int i = 0; i <= degree; i++)
+			{
+				NTL::random(p);
+				y2[j].append(p);
+			}
+		}
+
+		gTimer.reset();
+		gTimer.setTimePoint("start");
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+			for (int j = 0; j < numSlice; j++)
+				polynomial = NTL::interpolate(x, y2[j]);
+
+		gTimer.setTimePoint("interpolate");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+			for (int i = 0; i <= degree; ++i)
+			{
+				p = NTL::eval(polynomial, x[i]); //2x
+				p = NTL::eval(polynomial, x[i]); //2x
+			}
+
+		gTimer.setTimePoint("eval slicing Quaratic ZZ_p");
+
+		std::cout << gTimer << std::endl;
+	}
+
+
+#endif
+
+	//#################nlog^2n Full################################
+	{
+		ZZ prime;
+		GenGermainPrime(prime, fieldSize);
+
+		// init underlying prime field
+		ZZ_p::init(ZZ(prime));
+
+
+		// interpolation points:
+		ZZ_p* x = new ZZ_p[degree + 1];
+		ZZ_p* y = new ZZ_p[degree + 1];
+		for (unsigned int i = 0; i <= degree; i++) {
+			random(x[i]);
+			random(y[i]);
+			//        cout << "(" << x[i] << "," << y[i] << ")" << endl;
+		}
+
+		ZZ_pX P;
+
+		gTimer.reset();
+		gTimer.setTimePoint("start");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+		{
+			interpolate_zp(P, x, y, degree, numThread, prime);
+		}
+		gTimer.setTimePoint("interpolate nlog^2n ");
+		std::cout << gTimer << std::endl;
+
+		//EllipticCurve curve(Curve25519, ZeroBlock);
+
+		//EccNumber a(curve);
+		//EccPoint xa(curve), point(curve);
+
+		//a.randomize(OneBlock);
+		//point.randomize(AllOneBlock);
+
+		//gTimer.reset();
+		//gTimer.setTimePoint("start");
+
+		//for (int i = 0; i < degree; ++i)
+		//{
+		//	xa = (point * a);
+		//}
+		//gTimer.setTimePoint("exp done ");
+		//std::cout << gTimer << std::endl;
+
+
+	}
+
+#if 0
+	//#################nlog^2n Slicing################################
+	{
+		ZZ prime2;
+		GenGermainPrime(prime2, subField);
+		ZZ_p::init(ZZ(prime2));
+
+
+		ZZ_p* x2 = new ZZ_p[degree + 1];
+		for (unsigned int i = 0; i <= degree; i++) {
+			random(x2[i]);
+		}
+
+		std::vector<ZZ_p*> y2(4);
+		for (int j = 0; j < 4; j++)
+		{
+			y2[j] = new ZZ_p[degree + 1];
+			for (unsigned int i = 0; i <= degree; i++)
+			{
+				random(y2[j][i]);
+			}
+		}
+
+
+		ZZ_pX* M = new ZZ_pX[degree * 2 + 1];;
+		ZZ_p* a = new ZZ_p[degree + 1];;
+
+		gTimer.reset();
+		gTimer.setTimePoint("start");
+
+		for (int iTrial = 0; iTrial < numTrials; ++iTrial)
+		{
+			prepareForInterpolate(x2, degree, M, a, 1, prime2);
+
+
+			for (u64 j = 0; j < 4; j++)
+			{
+				ZZ_pX P;
+				ZZ_pX* temp = new ZZ_pX[degree * 2 + 1];
+				iterative_interpolate_zp(P, temp, y2[j], a, M, degree * 2 + 1, 1, prime2);
+			}
+		}
+		gTimer.setTimePoint("interpolate slicing nlog^2n");
+
+		std::cout << gTimer << std::endl;
+	}
+#endif
+
+}
+
+
 #ifdef PRTY2
 
 void Prty2_Sender(span<block> inputs, u64 theirSetSize, bool isMalicious, string ipAddr_Port, u64 numThreads = 1)
@@ -947,11 +1248,20 @@ void Prty2_Psi_demo()
 }
 
 
+void curve_Test()
+{
 
+
+
+}
 #endif
 
 int main(int argc, char** argv)
 {
+
+//	Poly_Test_Impl();
+//	return 0;
+
 	/*Prty2_Psi_demo();
 	return 0;*/
 	//Prty2_Psi_demo();
