@@ -378,26 +378,32 @@ namespace osuCrypto
     {
 		//===========Semi-honest
 		if (inputBitCount == 64)
-			mCode.load(mx64by448, sizeof(mx64by448));
+			mCode.load(mx65by448, sizeof(mx65by448));
 
-		//else if (inputBitCount == 72)
-		//	mCode.load(mx64, sizeof(mx64by448));
+		else if (inputBitCount == 72)
+			mCode.load(mx72by462, sizeof(mx72by462));
 
 		else if (inputBitCount == 80)
-			mCode.load(mx80by495, sizeof(mx80by495));
+			mCode.load(mx84by495, sizeof(mx84by495));
 
-		/*else if (inputBitCount == 72)
-			mCode.load(mx64by448, sizeof(mx64by448));*/
+		else if (inputBitCount == 88)
+			mCode.load(mx90by495, sizeof(mx90by495));
 
-			/*	else if (inputBitCount == 88)
-					mCode.load(mx64by448, sizeof(mx64by448));*/
+		else if (inputBitCount == 88)
+			mCode.load(mx90by495, sizeof(mx90by495));
 
-					//===========Malicous
-		else if (inputBitCount == 132)
+		//===========Malicous
+		else if (inputBitCount == 144)
+			mCode.load(mx144by605, sizeof(mx144by605));
+		else if (inputBitCount == 139)
+			mCode.load(mx138by594, sizeof(mx138by594));
+		else if (inputBitCount == 134)
+			mCode.load(mx132by583, sizeof(mx132by583));
+		else if (inputBitCount == 129)
 			mCode.load(mx132by583, sizeof(mx132by583));
 
 		else
-			throw std::runtime_error(LOCATION);
+			mCode.load(mx132by583, sizeof(mx132by583));
 
 
         mInputByteCount = (inputBitCount + 7) / 8;
