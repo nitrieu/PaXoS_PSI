@@ -785,12 +785,12 @@ void Prty_PSI_impl()
 void Poly_Test_Impl() {
 
 
-	int degree = 1<<20;
+	int degree = 1<<6;
 	int numTrials = 1;// (degree - 1 + (1 << 8)) / degree;
 	long numSlice = 4;
 	int subField = 128;
-	int fieldSize = 128;
-	int numThread = 16;
+	int fieldSize = 256;
+	int numThread = 1;
 	std::cout << "FieldSize: " << fieldSize << "\t";
 	//std::cout << "subField: " << subField << "\t";
 	//std::cout << "numSlice: " << numSlice << "\t";
@@ -1006,23 +1006,23 @@ void Poly_Test_Impl() {
 		gTimer.setTimePoint("interpolate nlog^2n ");
 		std::cout << gTimer << std::endl;
 
-		//EllipticCurve curve(Curve25519, ZeroBlock);
+		EllipticCurve curve(Curve25519, ZeroBlock);
 
-		//EccNumber a(curve);
-		//EccPoint xa(curve), point(curve);
+		EccNumber a(curve);
+		EccPoint xa(curve), point(curve);
 
-		//a.randomize(OneBlock);
-		//point.randomize(AllOneBlock);
+		a.randomize(OneBlock);
+		point.randomize(AllOneBlock);
 
-		//gTimer.reset();
-		//gTimer.setTimePoint("start");
+		gTimer.reset();
+		gTimer.setTimePoint("start");
 
-		//for (int i = 0; i < degree; ++i)
-		//{
-		//	xa = (point * a);
-		//}
-		//gTimer.setTimePoint("exp done ");
-		//std::cout << gTimer << std::endl;
+		for (int i = 0; i < degree; ++i)
+		{
+			xa = (point * a);
+		}
+		gTimer.setTimePoint("exp done ");
+		std::cout << gTimer << std::endl;
 
 
 	}
@@ -1259,8 +1259,8 @@ void curve_Test()
 int main(int argc, char** argv)
 {
 
-//	Poly_Test_Impl();
-//	return 0;
+	/*Poly_Test_Impl();
+	return 0;*/
 
 	/*Prty2_Psi_demo();
 	return 0;*/
@@ -1339,7 +1339,7 @@ int main(int argc, char** argv)
 	}
 
 	
-#if 1
+#if 0
 	std::thread thrd = std::thread([&]() {
 		Prty2_Sender(sendSet, recvSetSize, isMalicious, "localhost:1212");
 
