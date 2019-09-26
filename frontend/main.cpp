@@ -1297,14 +1297,37 @@ int main(int argc, char** argv)
 		&& argv[7][0] == '-' && argv[7][1] == 'i' && argv[7][2] == 'p')
 	{
 		sendSetSize = 1 << atoi(argv[4]);
-		isMalicious = atoi(argv[6]);
+
+		int aa = atoi(argv[6]);
+
+		if (aa == 1)
+			isMalicious = true;
+		else
+			isMalicious = false;
+
 		recvSetSize = sendSetSize;
-		ipadrr = argv[6];
+		ipadrr = argv[8];
 	}
 
 	if (argc == 7
 		&& argv[3][0] == '-' && argv[3][1] == 'n'
-		&& argv[7][0] == '-' && argv[7][1] == 'i' && argv[7][2] == 'p')
+		&& argv[5][0] == '-' && argv[5][1] == 's')
+	{
+		sendSetSize = 1 << atoi(argv[4]);
+		recvSetSize = sendSetSize;
+
+		int aa = atoi(argv[6]);
+
+		if(aa==1)
+			isMalicious = true;
+		else
+			isMalicious = false;
+
+	}
+
+	if (argc == 7
+		&& argv[3][0] == '-' && argv[3][1] == 'n'
+		&& argv[5][0] == '-' && argv[5][1] == 'i' && argv[5][2] == 'p')
 	{
 		sendSetSize = 1 << atoi(argv[4]);
 		recvSetSize = sendSetSize;
